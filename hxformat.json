@@ -1,0 +1,45 @@
+{
+    "disableFormatting": false,
+
+    "indentation": {
+        "character": "    ",
+        "tabWidth": 4,
+        "indentCaseLabels": true
+    },
+
+    "lineEnds": {
+        "anonFunctionCurly": {
+            "emptyCurly": "noBreak",
+            "leftCurly": "after",
+            "rightCurly": "both"
+        },
+
+        "leftCurly": "after",
+        "rightCurly": "both"
+    },
+
+    "sameLine": {
+        "ifBody": "same",
+        "ifElse": "next",
+        "doWhile": "next",
+        "tryBody": "same",
+        "tryCatch": "next"
+    },
+
+    "whitespace": {
+        "switchPolicy": "none",
+        "ifPolicy": "none",
+        "forPolicy": "none",
+        "whilePolicy": "none",
+        "doPolicy": "none",
+        "catchPolicy": "none",
+        "tryPolicy": "none",
+        "typeHintColonPolicy": "none"
+    },
+
+    "wrapping": {
+        "opAddSubChain": {
+            "defaultWrap": "keep"
+        }
+    }
+}

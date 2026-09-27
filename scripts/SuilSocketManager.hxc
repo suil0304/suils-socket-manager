@@ -1,0 +1,431 @@
+// shitass V-Slice
+// it cant separate to class/something files
+import haxe.io.Bytes;
+import funkin.modding.module.ModuleHandler;
+import haxe.ds.StringMap;
+import funkin.modding.events.ScriptEvent;
+import funkin.modding.module.Module;
+// protocol
+import openfl.utils.ByteArray;
+// socket
+import openfl.net.Socket;
+import haxe.ds.IntMap;
+
+class SuilSocketManager extends Module {
+    // Enum shit
+    public var CONNECT(get, never):Int;
+
+    function get_CONNECT():Int {
+        return SuilSocketEvent.CONNECT;
+    }
+
+    public var DATA(get, never):Int;
+
+    function get_DATA():Int {
+        return SuilSocketEvent.DATA;
+    }
+
+    public var CLOSE(get, never):Int;
+
+    function get_CLOSE():Int {
+        return SuilSocketEvent.CLOSE;
+    }
+
+    private var __socketMap:StringMap<SuilSocket>;
+
+    public function new() {
+        super("suil-socket-manager");
+    }
+
+    override function onCreate(event:ScriptEvent) {
+        __socketMap = new StringMap();
+    }
+
+    public function createSocket(id:String):Bool {
+        if(__socketMap.exists(id)) {
+            return false;
+        }
+
+        var socket = new SuilSocket();
+        __socketMap.set(id, socket);
+
+        return true;
+    }
+
+    public function connectSocket(id:String, host:String, port:Int):Bool {
+        if(!__socketMap.exists(id)) {
+            return false;
+        }
+
+        var socket = __socketMap.get(id);
+
+        if(socket.connected) {
+            return false;
+        }
+
+        socket.connect(host, port);
+
+        return true;
+    }
+
+    public function closeSocket(id:String):Bool {
+        if(!__socketMap.exists(id)) {
+            return false;
+        }
+
+        var socket = __socketMap.get(id);
+        socket.close();
+        __socketMap.remove(id);
+
+        return true;
+    }
+
+    public function sendSuildBytes(id:String, text:String):Bool {
+        if(!__socketMap.exists(id)) {
+            return false;
+        }
+
+        var socket = __socketMap.get(id);
+        if(!socket.connected) {
+            return false;
+        }
+
+        socket.sendSuildBytes(text);
+
+        return true;
+    }
+
+    public function addEventListener(id:String, socketEvent:SuilSocketEvent, listener:SuilSocketEventData->Void, priority:Int = 10):Bool {
+        if(!__socketMap.exists(id)) {
+            return false;
+        }
+
+        var socket = __socketMap.get(id);
+
+        socket.addEventListener(socketEvent, listener, priority);
+
+        return true;
+    }
+
+    public function removeEventListener(id:String, socketEvent:SuilSocketEvent, listener:SuilSocketEventData->Void):Bool {
+        if(!__socketMap.exists(id)) {
+            return false;
+        }
+
+        var socket = __socketMap.get(id);
+
+        socket.removeEventListener(socketEvent, listener);
+
+        return true;
+    }
+
+    override function onUpdate(event:UpdateScriptEvent) {
+        var removeIds:Array<String> = [];
+        for(id => socket in __socketMap.keyValueIterator()) {
+            if(!socket.update()) {
+                removeIds.push(id);
+            }
+        }
+
+        for(id in removeIds) {
+            __socketMap.remove(id);
+        }
+    }
+}
+
+// Protocol
+// -------------------------------------------
+class SuilTCPProtocolConstants {
+    public static final HEADER_SIZE = 4;
+    public static final CONNECTED_MESSAGE = "client connected, welcome.";
+    public static final CLOSED_MESSAGE = "server closed, goodbye.";
+
+    private function new() {}
+}
+
+typedef SuilTCPProtocol = {
+    var header:SuilTCPProtocolHeader;
+    var payload:ByteArray;
+}
+
+typedef SuilTCPProtocolHeader = {
+    var payloadSize:Int;
+}
+
+// -------------------------------------------
+// Socket Section
+// -------------------------------------------
+class SuilSocketEvent {
+    public static final CONNECT:Int = 0;
+    public static final DATA:Int = 1;
+    public static final CLOSE:Int = 2;
+}
+
+class SuilSocketEventData {
+    public var payload:ByteArray;
+
+    public var payloadString(get, never):String;
+
+    function get_payloadString():String {
+        return payload.toString();
+    }
+
+    public var payloadInt(get, never):Int;
+
+    function get_payloadInt():Int {
+        return payload.readInt();
+    }
+
+    public var payloadFloat(get, never):Float;
+
+    function get_payloadFloat():Float {
+        return payload.readFloat();
+    }
+
+    public function new() {}
+}
+
+typedef SuilSocketEventListener = {
+    var priority:Int;
+    var listener:SuilSocketEventData->Void;
+}
+
+class SuilSocket {
+    private var __socket:Socket;
+    private var __events:IntMap<Array<SuilSocketEventListener>>;
+
+    // buffer + state
+    private var __receiveBuffer:SuilTCPProtocol;
+    private var __curByteSize:Int;
+
+    private var __sendBuffer:SuilTCPProtocol;
+
+    public var receiving(default, null):Bool;
+    public var connected(default, null):Bool;
+    public var closed(default, null):Bool;
+
+    public function new() {
+        __socket = new Socket();
+
+        __events = new IntMap();
+        __events.set(SuilSocketEvent.CONNECT, []);
+        __events.set(SuilSocketEvent.DATA, []);
+        __events.set(SuilSocketEvent.CLOSE, []);
+
+        __receiveBuffer = {
+            header: {
+                payloadSize: 0
+            },
+            payload: new ByteArray()
+        };
+        __curByteSize = 0;
+
+        __sendBuffer = {
+            header: {
+                payloadSize: 0
+            },
+            payload: new ByteArray()
+        };
+
+        receiving = false;
+        connected = false;
+        closed = false;
+    }
+
+    public function update():Bool {
+        if(closed) {
+            return false;
+        }
+
+        var receiveResult = __updateReceive();
+
+        return receiveResult;
+    }
+
+    private function __updateReceive():Bool {
+        if(!receiving) {
+            if(!__receiveHeader()) {
+                return true;
+            }
+        }
+
+        var curBytes = Std.int(Math.min(
+            __socket.bytesAvailable, __receiveBuffer.header.payloadSize - __curByteSize));
+
+        if(curBytes <= 0) {
+            return true;
+        }
+
+        __socket.readBytes(__receiveBuffer.payload, __curByteSize, curBytes);
+        __curByteSize += curBytes;
+
+        if(__receiveBuffer.header.payloadSize - __curByteSize <= 0) {
+            if(!connected) {
+                if(__receiveBuffer.payload.toString() != SuilTCPProtocolConstants.CONNECTED_MESSAGE) {
+                    receiving = false;
+
+                    return true;
+                }
+
+                connected = true;
+                dispatchEvent(SuilSocketEvent.CONNECT);
+
+                receiving = false;
+
+                return true;
+            }
+            else if(__receiveBuffer.payload.toString() == SuilTCPProtocolConstants.CLOSED_MESSAGE) {
+                close();
+
+                return false;
+            }
+
+            receiving = false;
+            dispatchEvent(SuilSocketEvent.DATA);
+
+            return true;
+        }
+
+        return true;
+    }
+
+    public function connect(host:String, port:Int) {
+        if(closed) {
+            throw "socket closed";
+        }
+
+        __socket.connect(host, port);
+    }
+
+    public function close() {
+        if(closed) {
+            throw "socket closed";
+        }
+
+        receiving = false;
+        connected = false;
+        closed = true;
+        __dispatchEvent(SuilSocketEvent.CLOSE);
+
+        __socket.close();
+        __socket = null;
+
+        for(key in __events.keys()) {
+            var listeners = __events.get(key);
+            if(listeners == null) {
+                continue;
+            }
+
+            for(i in 0...listeners.length) {
+                listeners[i] = null;
+            }
+        }
+
+        __events.clear();
+        __events = null;
+    }
+
+    private function __receiveHeader():Bool {
+        if(__socket.bytesAvailable < SuilTCPProtocolConstants.HEADER_SIZE) { // protocol header size
+            return false;
+        }
+
+        // header
+        var byteSize = __socket.readUnsignedInt();
+        __receiveBuffer.header.payloadSize = byteSize;
+
+        if(byteSize == 0) {
+            return false;
+        }
+
+        // payload
+        __receiveBuffer.payload = new ByteArray(byteSize);
+
+        __curByteSize = 0;
+        receiving = true;
+
+        return true;
+    }
+
+    public function sendSuildBytes(text:String) {
+        __sendBuffer.payload = ByteArray.fromBytes(Bytes.ofString(text));
+        __sendBuffer.header.payloadSize = __sendBuffer.payload.length;
+
+        __socket.writeUnsignedInt(__sendBuffer.header.payloadSize);
+        __socket.writeBytes(__sendBuffer.payload, 0, __sendBuffer.header.payloadSize);
+
+        __socket.flush();
+    }
+
+    // event line
+    public function addEventListener(socketEvent:Int, listener:SuilSocketEventData->Void, priority:Int = 10) {
+        if(closed) {
+            throw "socket closed";
+        }
+
+        var listeners = __events.get(socketEvent);
+
+        listeners.push({
+            priority: priority,
+            listener: listener
+        });
+
+        listeners.sort((a, b) -> {
+            return b.priority - a.priority;
+        });
+    }
+
+    public function dispatchEvent(socketEvent:Int) {
+        if(closed) {
+            throw "socket closed";
+        }
+
+        __dispatchEvent(socketEvent);
+    }
+
+    private function __dispatchEvent(socketEvent:Int) {
+        var listeners = __events.get(socketEvent);
+        if(listeners == null) {
+            trace("wh");
+
+            return;
+        }
+
+        var eventData = new SuilSocketEventData();
+        for(curListener in listeners) {
+            if(curListener == null) {
+                continue;
+            }
+
+            eventData.payload = __receiveBuffer.payload;
+
+            curListener.listener(eventData);
+        }
+    }
+
+    public function removeEventListener(socketEvent:Int, listener:SuilSocketEventData->Void):Bool {
+        if(closed) {
+            throw "socket closed";
+        }
+
+        var listeners = __events.get(socketEvent);
+        var removed = false;
+
+        for(i in 0...listeners.length) {
+            var curListener = listeners[i];
+            if(curListener == null) {
+                continue;
+            }
+
+            if(curListener.listener == listener) {
+                listeners.splice(i, 1);
+
+                removed = true;
+
+                break;
+            }
+        }
+
+        return removed;
+    }
+} // -------------------------------------------
