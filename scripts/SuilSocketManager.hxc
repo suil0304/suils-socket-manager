@@ -95,7 +95,7 @@ class SuilSocketManager extends Module {
         return true;
     }
 
-    public function addEventListener(id:String, socketEvent:SuilSocketEvent, listener:SuilSocketEventData->Void, priority:Int = 10):Bool {
+    public function addEventListener(id:String, socketEvent:Int, listener:SuilSocketEventData->Void, priority:Int = 10):Bool {
         if(!__socketMap.exists(id)) {
             return false;
         }
@@ -107,7 +107,7 @@ class SuilSocketManager extends Module {
         return true;
     }
 
-    public function removeEventListener(id:String, socketEvent:SuilSocketEvent, listener:SuilSocketEventData->Void):Bool {
+    public function removeEventListener(id:String, socketEvent:Int, listener:SuilSocketEventData->Void):Bool {
         if(!__socketMap.exists(id)) {
             return false;
         }
