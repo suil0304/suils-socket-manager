@@ -3,7 +3,7 @@
     "title": "Suil's Socket Manager",
     "description": "A V-Slice library (mod) about socket management or something",
     "api_version": "0.8.5",
-    "mod_version": "0.1.0",
+    "mod_version": "0.1.0-beta.1",
     "contributors": [
         {
             "name": "suil0304",
