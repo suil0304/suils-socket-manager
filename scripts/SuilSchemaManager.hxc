@@ -1,0 +1,96 @@
+import funkin.modding.events.ScriptEvent;
+import funkin.modding.module.Module;
+import haxe.ds.StringMap;
+// socket.schema
+import suil0304.socket.schema.TCPCustomSchema;
+import suil0304.socket.schema.SchemaHeaderType;
+import suil0304.socket.schema.SchemaHeaderRole;
+// socket.schema.builder
+import suil0304.socket.schema.builder.TCPSchemaBuilder;
+
+class SuilSchemaManager extends Module {
+    // enum shit
+    // header types
+    public var BYTE_HEADER_TYPE(get, never):Int;
+
+    function get_BYTE_HEADER_TYPE():Int {
+        return SchemaHeaderType.BYTE;
+    }
+
+    public var SHORT_HEADER_TYPE(get, never):Int;
+
+    function get_SHORT_HEADER_TYPE():Int {
+        return SchemaHeaderType.SHORT;
+    }
+
+    public var INT_HEADER_TYPE(get, never):Int;
+
+    function get_INT_HEADER_TYPE():Int {
+        return SchemaHeaderType.INT;
+    }
+
+    public var VARINT_HEADER_TYPE(get, never):Int;
+
+    function get_VARINT_HEADER_TYPE():Int {
+        return SchemaHeaderType.VARINT;
+    }
+
+    public var STRING_HEADER_TYPE(get, never):Int;
+
+    function get_STRING_HEADER_TYPE():Int {
+        return SchemaHeaderType.STRING;
+    }
+
+    // header roles (bit flags)
+    public var PAYLOAD_BYTE_SIZE_HEADER_ROLE(get, never):Int;
+
+    function get_PAYLOAD_BYTE_SIZE_HEADER_ROLE():Int {
+        return SchemaHeaderRole.PAYLOAD_BYTE_SIZE;
+    }
+
+    // schema manager
+    private var __idBlacklist:Array<String> = ["default"];
+    private var __tcpSchemaMap:StringMap<TCPCustomSchema>;
+    // private var __udpSchemaMap:StringMap<UDPCustomSchema>;
+
+    public function new() {
+        super("suil-schema-handler", 0);
+    }
+
+    override function onCreate(event:ScriptEvent) {
+        __tcpSchemaMap = new StringMap();
+
+        __tcpSchemaMap.set("default", createTCPSchemaBuilder().setConnectedMessage("client connected, welcome.")
+            .setCloseMessage("server closed, goodbye.")
+
+            .addHeader()
+            .setHeaderName("payloadSize")
+            .setHeaderType(INT_HEADER_TYPE)
+            .addHeaderRole(PAYLOAD_BYTE_SIZE_HEADER_ROLE)
+
+            .build()
+        );
+    }
+
+    public function createTCPSchemaBuilder():TCPSchemaBuilder {
+        return new TCPSchemaBuilder();
+    }
+
+    public function setTCPSchema(id:String, schema:TCPCustomSchema):Bool {
+        if(__idBlacklist.indexOf(id) != -1) {
+            return false;
+        }
+
+        __tcpSchemaMap.set(id, schema);
+
+        return true;
+    }
+
+    public function getTCPSchema(id:String):Null<TCPCustomSchema> {
+        return __tcpSchemaMap.get(id);
+    }
+
+    public function getTCPSchemaDefault():TCPCustomSchema {
+        return __tcpSchemaMap.get("default");
+    }
+}

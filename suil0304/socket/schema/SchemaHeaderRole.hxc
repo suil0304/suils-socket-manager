@@ -1,0 +1,8 @@
+package suil0304.socket.schema;
+
+// bit flag
+class SchemaHeaderRole {
+    public static final PAYLOAD_BYTE_SIZE = 1 << 0;
+
+    private function new() {}
+}

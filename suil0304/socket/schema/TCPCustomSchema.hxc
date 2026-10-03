@@ -1,0 +1,69 @@
+package suil0304.socket.schema;
+
+import haxe.ds.StringMap;
+
+class TCPCustomSchema {
+    // protocol
+    private var __headerMap:StringMap<TCPCustomHeader>;
+    public var totalHeaderByteSize(default, null):Int;
+
+    private var __payloadByteSizeHeaderName:String;
+
+    public var headerOrderArray(default, null):Array<String>;
+
+    // handshakes
+    public var connectedMessage(default, null):String;
+    public var closeMessage(default, null):String;
+
+    public function new(protocolParameters:ProtocolParameters, handshakeParameters:HandshakeParameters) {
+        __headerMap = protocolParameters.headerMap;
+        totalHeaderByteSize = protocolParameters.totalHeaderByteSize;
+        __payloadByteSizeHeaderName = protocolParameters.payloadByteSizeHeaderName;
+
+        connectedMessage = handshakeParameters.connectedMessage;
+        closeMessage = handshakeParameters.closeMessage;
+
+        headerOrderArray = [];
+        for(name in __headerMap.keys()) {
+            headerOrderArray.push(name);
+        }
+
+        headerOrderArray.sort((a, b) -> {
+            return __headerMap.get(a).order - __headerMap.get(b).order;
+        });
+    }
+
+    public function getHeaderByIndex(index:Int):TCPCustomHeader {
+        if(index < 0 || index + 1 > headerOrderArray.length) {
+            throw "invalid index";
+        }
+
+        return __headerMap.get(headerOrderArray[index]);
+    }
+
+    public function getHeaderByName(name:String):TCPCustomHeader {
+        if(!__headerMap.exists(name)) {
+            throw "invalid name";
+        }
+
+        return __headerMap.get(name);
+    }
+}
+
+typedef TCPCustomHeader = {
+    var type:Int;
+    var byteSize:Int;
+    var order:Int;
+}
+
+// parameter
+typedef ProtocolParameters = {
+    var headerMap:StringMap<TCPCustomHeader>;
+    var totalHeaderByteSize:Int;
+    var payloadByteSizeHeaderName:String;
+}
+
+typedef HandshakeParameters = {
+    var connectedMessage:String;
+    var closeMessage:String;
+}
