@@ -205,7 +205,7 @@ class Socket {
         });
 
         listeners.sort((a, b) -> {
-            return b.priority - a.priority;
+            return a.priority - b.priority;
         });
     }
 
