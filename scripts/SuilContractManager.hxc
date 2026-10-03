@@ -1,66 +1,66 @@
 import funkin.modding.events.ScriptEvent;
 import funkin.modding.module.Module;
 import haxe.ds.StringMap;
-// socket.schema
-import suil0304.socket.schema.TCPCustomSchema;
-import suil0304.socket.schema.SchemaHeaderType;
-import suil0304.socket.schema.SchemaHeaderRole;
-// socket.schema.builder
-import suil0304.socket.schema.builder.TCPSchemaBuilder;
+// socket.contract
+import suil0304.socket.contract.TCPCustomContract;
+import suil0304.socket.contract.constants.HeaderType;
+import suil0304.socket.contract.constants.HeaderRole;
+// socket.contract.builder
+import suil0304.socket.contract.builder.TCPContractBuilder;
 
-class SuilSchemaManager extends Module {
+class SuilContractManager extends Module {
     // enum shit
     // header types
     public var BYTE_HEADER_TYPE(get, never):Int;
 
     function get_BYTE_HEADER_TYPE():Int {
-        return SchemaHeaderType.BYTE;
+        return HeaderType.BYTE;
     }
 
     public var SHORT_HEADER_TYPE(get, never):Int;
 
     function get_SHORT_HEADER_TYPE():Int {
-        return SchemaHeaderType.SHORT;
+        return HeaderType.SHORT;
     }
 
     public var INT_HEADER_TYPE(get, never):Int;
 
     function get_INT_HEADER_TYPE():Int {
-        return SchemaHeaderType.INT;
+        return HeaderType.INT;
     }
 
     public var VARINT_HEADER_TYPE(get, never):Int;
 
     function get_VARINT_HEADER_TYPE():Int {
-        return SchemaHeaderType.VARINT;
+        return HeaderType.VARINT;
     }
 
     public var STRING_HEADER_TYPE(get, never):Int;
 
     function get_STRING_HEADER_TYPE():Int {
-        return SchemaHeaderType.STRING;
+        return HeaderType.STRING;
     }
 
     // header roles (bit flags)
     public var PAYLOAD_BYTE_SIZE_HEADER_ROLE(get, never):Int;
 
     function get_PAYLOAD_BYTE_SIZE_HEADER_ROLE():Int {
-        return SchemaHeaderRole.PAYLOAD_BYTE_SIZE;
+        return HeaderRole.PAYLOAD_BYTE_SIZE;
     }
 
-    // schema manager
+    // contract manager
     private var __idBlacklist:Array<String> = ["default"];
-    private var __tcpSchemaMap:StringMap<TCPCustomSchema>;
-    // private var __udpSchemaMap:StringMap<UDPCustomSchema>;
+    private var __tcpContractMap:StringMap<TCPCustomContract>;
+    // private var __udpContractMap:StringMap<UDPCustomContract>;
 
     public function new() {
-        super("suil-schema-handler", 0);
+        super("suil-contract-handler", 0);
     }
 
     override function onCreate(event:ScriptEvent) {
-        __tcpSchemaMap = new StringMap();
+        __tcpContractMap = new StringMap();
 
-        __tcpSchemaMap.set("default", createTCPSchemaBuilder().setConnectedMessage("client connected, welcome.")
+        __tcpContractMap.set("default", createTCPContractBuilder().setConnectedMessage("client connected, welcome.")
             .setCloseMessage("server closed, goodbye.")
 
             .addHeader()
@@ -72,25 +72,25 @@ class SuilSchemaManager extends Module {
         );
     }
 
-    public function createTCPSchemaBuilder():TCPSchemaBuilder {
-        return new TCPSchemaBuilder();
+    public function createTCPContractBuilder():TCPContractBuilder {
+        return new TCPContractBuilder();
     }
 
-    public function setTCPSchema(id:String, schema:TCPCustomSchema):Bool {
+    public function setTCPContract(id:String, schema:TCPCustomContract):Bool {
         if(__idBlacklist.indexOf(id) != -1) {
             return false;
         }
 
-        __tcpSchemaMap.set(id, schema);
+        __tcpContractMap.set(id, schema);
 
         return true;
     }
 
-    public function getTCPSchema(id:String):Null<TCPCustomSchema> {
-        return __tcpSchemaMap.get(id);
+    public function getTCPContract(id:String):Null<TCPCustomContract> {
+        return __tcpContractMap.get(id);
     }
 
-    public function getTCPSchemaDefault():TCPCustomSchema {
-        return __tcpSchemaMap.get("default");
+    public function getTCPContractDefault():TCPCustomContract {
+        return __tcpContractMap.get("default");
     }
 }

@@ -1,13 +1,13 @@
-package suil0304.socket.schema.builder;
+package suil0304.socket.contract.builder;
 
 import haxe.ds.StringMap;
-import suil0304.socket.schema.TCPCustomSchema;
-import suil0304.socket.schema.SchemaHeaderType;
-import suil0304.socket.schema.SchemaHeaderRole;
+import suil0304.socket.contract.TCPCustomContract;
+import suil0304.socket.contract.constants.HeaderType;
+import suil0304.socket.contract.constants.HeaderRole;
 
 // i love builder pattern
 // yay
-class TCPSchemaBuilder {
+class TCPContractBuilder {
     private var __headers:Array<TCPCustomHeaderRaw>;
     private var __connectedMessage:Null<String>;
     private var __closeMessage:Null<String>;
@@ -35,7 +35,7 @@ class TCPSchemaBuilder {
         }
     }
 
-    public function addHeader():TCPSchemaBuilder {
+    public function addHeader():TCPContractBuilder {
         __validateHeader();
 
         __headers.push({
@@ -50,7 +50,7 @@ class TCPSchemaBuilder {
         return this;
     }
 
-    public function setHeaderIndex(index:Int = 0):TCPSchemaBuilder {
+    public function setHeaderIndex(index:Int = 0):TCPContractBuilder {
         if(index < 0 || index + 1 > __headers.length) {
             throw "invalid index";
         }
@@ -62,7 +62,7 @@ class TCPSchemaBuilder {
         return this;
     }
 
-    public function popHeader():TCPSchemaBuilder {
+    public function popHeader():TCPContractBuilder {
         if(__headers.length <= 0) {
             throw "no header";
         }
@@ -75,14 +75,14 @@ class TCPSchemaBuilder {
             __curHeaderIndex = -1;
         }
 
-        if(header.headerRole & SchemaHeaderRole.PAYLOAD_BYTE_SIZE > 0) {
+        if(header.headerRole & HeaderRole.PAYLOAD_BYTE_SIZE > 0) {
             __payloadByteSizeExists = false;
         }
 
         return this;
     }
 
-    public function setHeaderName(name:String):TCPSchemaBuilder {
+    public function setHeaderName(name:String):TCPContractBuilder {
         if(__headers.length <= 0) {
             throw "no header";
         }
@@ -92,7 +92,7 @@ class TCPSchemaBuilder {
         return this;
     }
 
-    public function setHeaderType(type:Int):TCPSchemaBuilder {
+    public function setHeaderType(type:Int):TCPContractBuilder {
         if(__headers.length <= 0) {
             throw "no header";
         }
@@ -100,19 +100,19 @@ class TCPSchemaBuilder {
         var header = __headers[__curHeaderIndex];
 
         header.byteSize = switch(type) {
-            case SchemaHeaderType.BYTE:
+            case HeaderType.BYTE:
                 1;
 
-            case SchemaHeaderType.SHORT:
+            case HeaderType.SHORT:
                 2;
 
-            case SchemaHeaderType.INT:
+            case HeaderType.INT:
                 4;
 
-            case SchemaHeaderType.VARINT: // var
+            case HeaderType.VARINT: // var
                 4;
 
-            case SchemaHeaderType.STRING: // var
+            case HeaderType.STRING: // var
                 20;
 
             default:
@@ -123,7 +123,7 @@ class TCPSchemaBuilder {
         return this;
     }
 
-    public function setHeaderByteSize(byteSize:Int):TCPSchemaBuilder {
+    public function setHeaderByteSize(byteSize:Int):TCPContractBuilder {
         if(__headers.length <= 0) {
             throw "no header";
         }
@@ -135,7 +135,7 @@ class TCPSchemaBuilder {
         var header = __headers[__curHeaderIndex];
 
         switch(header.type) {
-            case SchemaHeaderType.VARINT, SchemaHeaderType.STRING:
+            case HeaderType.VARINT, HeaderType.STRING:
 
             default:
                 throw "changing byte size is not support for this header type";
@@ -146,7 +146,7 @@ class TCPSchemaBuilder {
         return this;
     }
 
-    public function addHeaderRole(role:Int):TCPSchemaBuilder {
+    public function addHeaderRole(role:Int):TCPContractBuilder {
         if(__headers.length <= 0) {
             throw "no header";
         }
@@ -162,8 +162,8 @@ class TCPSchemaBuilder {
         }
 
         if(
-            role == SchemaHeaderRole.PAYLOAD_BYTE_SIZE
-            && header.headerRole & SchemaHeaderRole.PAYLOAD_BYTE_SIZE == 0
+            role == HeaderRole.PAYLOAD_BYTE_SIZE
+            && header.headerRole & HeaderRole.PAYLOAD_BYTE_SIZE == 0
         ) {
             if(__payloadByteSizeExists) {
                 throw "duplicated payload byte size role";
@@ -178,14 +178,14 @@ class TCPSchemaBuilder {
         return this;
     }
 
-    public function resetHeaderRole():TCPSchemaBuilder {
+    public function resetHeaderRole():TCPContractBuilder {
         if(__headers.length <= 0) {
             throw "no header";
         }
 
         var header = __headers[__curHeaderIndex];
 
-        if(header.headerRole & SchemaHeaderRole.PAYLOAD_BYTE_SIZE > 0) {
+        if(header.headerRole & HeaderRole.PAYLOAD_BYTE_SIZE > 0) {
             __payloadByteSizeExists = false;
         }
 
@@ -194,7 +194,7 @@ class TCPSchemaBuilder {
         return this;
     }
 
-    public function setConnectedMessage(message:String):TCPSchemaBuilder {
+    public function setConnectedMessage(message:String):TCPContractBuilder {
         if(message == null) {
             throw "invalid message";
         }
@@ -204,7 +204,7 @@ class TCPSchemaBuilder {
         return this;
     }
 
-    public function setCloseMessage(message:String):TCPSchemaBuilder {
+    public function setCloseMessage(message:String):TCPContractBuilder {
         if(message == null) {
             throw "invalid message";
         }
@@ -214,7 +214,7 @@ class TCPSchemaBuilder {
         return this;
     }
 
-    public function build():TCPCustomSchema {
+    public function build():TCPCustomContract {
         if(__headers.length <= 0) {
             throw "no header";
         }
@@ -250,12 +250,12 @@ class TCPSchemaBuilder {
 
             totalHeaderByteSize += header.byteSize;
 
-            if(header.headerRole & SchemaHeaderRole.PAYLOAD_BYTE_SIZE > 0) {
+            if(header.headerRole & HeaderRole.PAYLOAD_BYTE_SIZE > 0) {
                 payloadByteSizeHeaderName = header.name;
             }
         }
 
-        return new TCPCustomSchema(
+        return new TCPCustomContract(
             {
                 headerMap: headerMap,
                 totalHeaderByteSize: totalHeaderByteSize,

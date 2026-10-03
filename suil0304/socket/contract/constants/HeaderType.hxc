@@ -1,6 +1,6 @@
-package suil0304.socket.schema;
+package suil0304.socket.contract.constants;
 
-class SchemaHeaderType {
+class HeaderType {
     // integer
     public static final BYTE = 0;
     public static final SHORT = 1;
