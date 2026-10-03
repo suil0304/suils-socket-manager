@@ -95,4 +95,23 @@ class SuilContractManager extends Module {
     public function getTCPContractDefault():TCPCustomContract {
         return __tcpContractMap.get("default");
     }
+
+    override function onDestroy(event:ScriptEvent) {
+        var ids:Array<String> = [];
+
+        try {
+            for(id in __tcpContractMap.keys()) {
+                ids.push(id);
+
+                __tcpContractMap.get(id).destroy();
+            }
+        }
+        catch {}
+
+        for(id in ids) {
+            __tcpContractMap.remove(id);
+        }
+
+        ids = null;
+    }
 }

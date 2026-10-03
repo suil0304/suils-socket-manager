@@ -4,6 +4,9 @@ import suil0304.ds.ReadonlyStringMap;
 import suil0304.ds.ReadonlyArray;
 
 class TCPCustomContract {
+    public var destroyed(default, null):Bool;
+
+    // contract
     public var timeout(default, null):Int = 0;
 
     // protocol
@@ -42,9 +45,15 @@ class TCPCustomContract {
         });
 
         headerOrderArray = new ReadonlyArray(array);
+
+        destroyed = false;
     }
 
     public function getHeaderByIndex(index:Int):TCPCustomHeader {
+        if(destroyed) {
+            throw "this contract is destroyed";
+        }
+
         if(index < 0 || index + 1 > headerOrderArray.length) {
             throw "invalid index";
         }
@@ -53,11 +62,38 @@ class TCPCustomContract {
     }
 
     public function getHeaderByName(name:String):TCPCustomHeader {
+        if(destroyed) {
+            throw "this contract is destroyed";
+        }
+
         if(!__headerMap.exists(name)) {
             throw "invalid name";
         }
 
         return __headerMap.get(name);
+    }
+
+    public function destroy() {
+        if(destroyed) {
+            throw "this contract is destroyed";
+        }
+        
+        timeout = 0;
+
+        __headerMap.destroy();
+        __headerMap = null;
+
+        totalHeaderByteSize = 0;
+
+        __payloadByteSizeHeaderName = null;
+
+        headerOrderArray.destroy();
+        headerOrderArray = null;
+
+        connectedMessage = null;
+        closeMessage = null;
+
+        destroyed = true;
     }
 }
 
