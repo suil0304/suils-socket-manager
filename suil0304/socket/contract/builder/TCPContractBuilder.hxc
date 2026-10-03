@@ -8,7 +8,12 @@ import suil0304.socket.contract.constants.HeaderRole;
 // i love builder pattern
 // yay
 class TCPContractBuilder {
+    private var __timeout:Int; // ms
+
+    // protocol
     private var __headers:Array<TCPCustomHeaderRaw>;
+
+    // handshake
     private var __connectedMessage:Null<String>;
     private var __closeMessage:Null<String>;
 
@@ -23,6 +28,7 @@ class TCPContractBuilder {
         __curHeaderIndex = -1;
     }
 
+    // validate
     private function __validateHeader() {
         if(__headers.length > 0) {
             var header = __headers[__curHeaderIndex];
@@ -35,6 +41,18 @@ class TCPContractBuilder {
         }
     }
 
+    // contract
+    public function setTimeout(ms:Int):TCPContractBuilder {
+        if(ms <= 0) {
+            throw "invalid timeout";
+        }
+
+        __timeout = ms;
+
+        return this;
+    }
+
+    // protocol
     public function addHeader():TCPContractBuilder {
         __validateHeader();
 
@@ -194,6 +212,7 @@ class TCPContractBuilder {
         return this;
     }
 
+    // handshake
     public function setConnectedMessage(message:String):TCPContractBuilder {
         if(message == null) {
             throw "invalid message";
@@ -217,6 +236,10 @@ class TCPContractBuilder {
     public function build():TCPCustomContract {
         if(__headers.length <= 0) {
             throw "no header";
+        }
+
+        if(__timeout == 0) {
+            throw "zero ms to timeout is not support";
         }
 
         if(__connectedMessage == null) {

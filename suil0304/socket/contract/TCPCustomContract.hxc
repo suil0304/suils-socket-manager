@@ -3,6 +3,8 @@ package suil0304.socket.contract;
 import haxe.ds.StringMap;
 
 class TCPCustomContract {
+    public var timeout(default, null):Int;
+
     // protocol
     private var __headerMap:StringMap<TCPCustomHeader>;
     public var totalHeaderByteSize(default, null):Int;
@@ -16,9 +18,11 @@ class TCPCustomContract {
     public var closeMessage(default, null):String;
 
     public function new(
+        contractParameters:ContractParameters,
         protocolParameters:ProtocolParameters,
         handshakeParameters:HandshakeParameters
     ) {
+        timeout = contractParameters.timeout;
 
         __headerMap = protocolParameters.headerMap;
         totalHeaderByteSize = protocolParameters.totalHeaderByteSize;
@@ -61,6 +65,10 @@ typedef TCPCustomHeader = {
 }
 
 // parameter
+typedef ContractParameters = {
+    var timeout:Int;
+}
+
 typedef ProtocolParameters = {
     var headerMap:StringMap<TCPCustomHeader>;
     var totalHeaderByteSize:Int;

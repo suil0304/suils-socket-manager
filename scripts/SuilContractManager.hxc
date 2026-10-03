@@ -60,7 +60,9 @@ class SuilContractManager extends Module {
     override function onCreate(event:ScriptEvent) {
         __tcpContractMap = new StringMap();
 
-        __tcpContractMap.set("default", createTCPContractBuilder().setConnectedMessage("client connected, welcome.")
+        __tcpContractMap.set("default", createTCPContractBuilder().setTimeout(600000)
+
+            .setConnectedMessage("client connected, welcome.")
             .setCloseMessage("server closed, goodbye.")
 
             .addHeader()
