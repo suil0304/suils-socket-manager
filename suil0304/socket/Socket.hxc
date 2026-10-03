@@ -1,0 +1,281 @@
+package suil0304.socket;
+
+import haxe.io.Bytes;
+import openfl.net.Socket as OpenFlSocket;
+import haxe.ds.IntMap;
+import haxe.ds.List;
+import openfl.utils.ByteArray;
+// socket.event
+import suil0304.socket.event.SocketEventType;
+import suil0304.socket.event.SocketEventBase;
+import suil0304.socket.event.SocketConnectEvent;
+import suil0304.socket.event.SocketDataEvent;
+import suil0304.socket.event.SocketCloseEvent;
+// socket.schema
+import suil0304.socket.schema.TCPCustomProtocolConstants;
+
+typedef TCPCustomProtocol = {
+    var header:TCPCustomProtocolHeader;
+    var payload:ByteArray;
+}
+
+typedef TCPCustomProtocolHeader = {
+    var payloadSize:Int;
+}
+
+class Socket {
+    private var __socket:OpenFlSocket;
+    private var __events:IntMap<Array<_SocketEventListener>>;
+
+    // buffer + state
+    private var __receiveBuffer:TCPCustomProtocol;
+    private var __curByteSize:Int;
+
+    // private var __sendQueue:List<>;
+    private var __sendBuffer:TCPCustomProtocol;
+
+    public var receiving(default, null):Bool;
+    public var connected(default, null):Bool;
+    public var closed(default, null):Bool;
+
+    public function new() {
+        __socket = new OpenFlSocket();
+
+        __events = new IntMap();
+        __events.set(SocketEventType.CONNECT, []);
+        __events.set(SocketEventType.DATA, []);
+        __events.set(SocketEventType.CLOSE, []);
+
+        __receiveBuffer = {
+            header: {
+                payloadSize: 0
+            },
+            payload: new ByteArray()
+        };
+        __curByteSize = 0;
+
+        __sendBuffer = {
+            header: {
+                payloadSize: 0
+            },
+            payload: new ByteArray()
+        };
+
+        receiving = false;
+        connected = false;
+        closed = false;
+    }
+
+    public function update():Bool {
+        if(closed) {
+            return false;
+        }
+
+        var receiveResult = __updateReceive();
+
+        return receiveResult;
+    }
+
+    private function __updateReceive():Bool {
+        if(!receiving) {
+            if(!__receiveHeader()) {
+                return true;
+            }
+        }
+
+        var curBytes = Std.int(Math.min(
+            __socket.bytesAvailable, __receiveBuffer.header.payloadSize - __curByteSize));
+
+        if(curBytes <= 0) {
+            return true;
+        }
+
+        __socket.readBytes(__receiveBuffer.payload, __curByteSize, curBytes);
+        __curByteSize += curBytes;
+
+        if(__receiveBuffer.header.payloadSize - __curByteSize <= 0) {
+            if(!connected) {
+                if(__receiveBuffer.payload.toString() != TCPCustomProtocolConstants.CONNECTED_MESSAGE) {
+                    receiving = false;
+
+                    return true;
+                }
+
+                connected = true;
+                dispatchEvent(SocketEventType.CONNECT);
+
+                receiving = false;
+
+                return true;
+            }
+            else if(__receiveBuffer.payload.toString() == TCPCustomProtocolConstants.CLOSED_MESSAGE) {
+                close();
+
+                return false;
+            }
+
+            receiving = false;
+            dispatchEvent(SocketEventType.DATA);
+
+            return true;
+        }
+
+        return true;
+    }
+
+    public function connect(host:String, port:Int) {
+        if(closed) {
+            throw "socket closed";
+        }
+
+        __socket.connect(host, port);
+    }
+
+    public function close() {
+        if(closed) {
+            throw "socket closed";
+        }
+
+        receiving = false;
+        connected = false;
+        closed = true;
+        __dispatchEvent(SocketEventType.CLOSE);
+
+        __socket.close();
+        __socket = null;
+
+        for(key in __events.keys()) {
+            var listeners = __events.get(key);
+            if(listeners == null) {
+                continue;
+            }
+
+            for(i in 0...listeners.length) {
+                listeners[i] = null;
+            }
+        }
+
+        __events.clear();
+        __events = null;
+    }
+
+    private function __receiveHeader():Bool {
+        if(__socket.bytesAvailable < TCPCustomProtocolConstants.HEADER_SIZE) { // protocol header size
+            return false;
+        }
+
+        // header
+        var byteSize = __socket.readUnsignedInt();
+        __receiveBuffer.header.payloadSize = byteSize;
+
+        if(byteSize == 0) {
+            return false;
+        }
+
+        // payload
+        __receiveBuffer.payload = new ByteArray(byteSize);
+
+        __curByteSize = 0;
+        receiving = true;
+
+        return true;
+    }
+
+    public function sendSuildBytes(text:String) {
+        __sendBuffer.payload = ByteArray.fromBytes(Bytes.ofString(text));
+        __sendBuffer.header.payloadSize = __sendBuffer.payload.length;
+
+        __socket.writeUnsignedInt(__sendBuffer.header.payloadSize);
+        __socket.writeBytes(__sendBuffer.payload, 0, __sendBuffer.header.payloadSize);
+
+        __socket.flush();
+    }
+
+    // event line
+    public function addEventListener(socketEvent:Int, listener:Dynamic->Void, priority:Int = 10) {
+        if(closed) {
+            throw "socket closed";
+        }
+
+        var listeners = __events.get(socketEvent);
+
+        listeners.push({
+            priority: priority,
+            listener: listener
+        });
+
+        listeners.sort((a, b) -> {
+            return b.priority - a.priority;
+        });
+    }
+
+    public function dispatchEvent(socketEvent:Int) {
+        if(closed) {
+            throw "socket closed";
+        }
+
+        __dispatchEvent(socketEvent);
+    }
+
+    private function __dispatchEvent(socketEvent:Int) {
+        var listeners = __events.get(socketEvent);
+        if(listeners == null) {
+            trace("wh");
+
+            return;
+        }
+
+        var socketEventData:SocketEventBase = switch(socketEvent) {
+            case SocketEventType.CONNECT:
+                new SocketConnectEvent();
+
+            case SocketEventType.DATA:
+                new SocketDataEvent();
+
+            case SocketEventType.CLOSE:
+                new SocketCloseEvent();
+        }
+
+        for(curListener in listeners) {
+            if(curListener == null) {
+                continue;
+            }
+
+            socketEventData.payload = __receiveBuffer.payload;
+
+            curListener.listener(socketEventData);
+        }
+    }
+
+    public function removeEventListener(socketEvent:Int, listener:Dynamic->Void):Bool {
+        if(closed) {
+            throw "socket closed";
+        }
+
+        var listeners = __events.get(socketEvent);
+        var removed = false;
+
+        for(i in 0...listeners.length) {
+            var curListener = listeners[i];
+            if(curListener == null) {
+                continue;
+            }
+
+            if(curListener.listener == listener) {
+                listeners.splice(i, 1);
+
+                removed = true;
+
+                break;
+            }
+        }
+
+        return removed;
+    }
+}
+
+typedef _SocketEventListener = {
+    var priority:Int;
+    var listener:Dynamic->Void;
+    var type:SocketEventType;
+}

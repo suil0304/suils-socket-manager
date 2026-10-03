@@ -1,0 +1,3 @@
+package suil0304.socket.event;
+
+class SocketConnectEvent extends SocketEventBase {}
