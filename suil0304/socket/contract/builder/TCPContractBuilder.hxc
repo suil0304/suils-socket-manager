@@ -8,7 +8,7 @@ import suil0304.socket.contract.constants.HeaderRole;
 // i love builder pattern
 // yay
 class TCPContractBuilder {
-    private var __timeout:Int; // ms
+    private var __timeout:Int = 0; // ms
 
     // protocol
     private var __headers:Array<TCPCustomHeaderRaw>;

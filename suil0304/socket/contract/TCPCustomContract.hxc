@@ -3,7 +3,7 @@ package suil0304.socket.contract;
 import haxe.ds.StringMap;
 
 class TCPCustomContract {
-    public var timeout(default, null):Int;
+    public var timeout(default, null):Int = 0;
 
     // protocol
     private var __headerMap:StringMap<TCPCustomHeader>;
