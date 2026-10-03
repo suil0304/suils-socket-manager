@@ -1,9 +1,0 @@
-package suil0304.socket.schema;
-
-class TCPCustomProtocolConstants {
-    public static final HEADER_SIZE = 4;
-    public static final CONNECTED_MESSAGE = "client connected, welcome.";
-    public static final CLOSED_MESSAGE = "server closed, goodbye.";
-
-    private function new() {}
-}

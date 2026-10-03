@@ -122,7 +122,6 @@ class ReadonlyArray {
             throw "this array is destroyed";
         }
 
-        __array.length = 0;
         __array = null;
 
         destroyed = true;

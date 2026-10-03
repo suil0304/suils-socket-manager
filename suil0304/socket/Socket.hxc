@@ -1,9 +1,14 @@
 package suil0304.socket;
 
-import haxe.io.Bytes;
-import openfl.net.Socket as OpenFlSocket;
+// ds
+import haxe.ds.StringMap;
 import haxe.ds.IntMap;
 import haxe.ds.List;
+import suil0304.ds.ReadonlyArray;
+import suil0304.ds.ReadonlyStringMap;
+// network
+import haxe.io.Bytes;
+import openfl.net.Socket as OpenFlSocket;
 import openfl.utils.ByteArray;
 // socket.event
 import suil0304.socket.event.SocketEventType;
@@ -11,94 +16,137 @@ import suil0304.socket.event.SocketEventBase;
 import suil0304.socket.event.SocketConnectEvent;
 import suil0304.socket.event.SocketDataEvent;
 import suil0304.socket.event.SocketCloseEvent;
-// socket.schema
-import suil0304.socket.schema.TCPCustomProtocolConstants;
+import suil0304.socket.event.SocketTimeoutEvent;
+// socket.contract
+import suil0304.socket.contract.TCPCustomContract;
+import suil0304.socket.contract.constants.HeaderType;
 
 typedef TCPCustomProtocol = {
-    var header:TCPCustomProtocolHeader;
+    var headerMap:StringMap<Dynamic>;
     var payload:ByteArray;
-}
-
-typedef TCPCustomProtocolHeader = {
-    var payloadSize:Int;
 }
 
 class Socket {
     private var __socket:OpenFlSocket;
     private var __events:IntMap<Array<_SocketEventListener>>;
 
-    // buffer + state
+    private var __contract:TCPCustomContract;
+
+    private var __connectTimeoutCount:Float;
+    private var __refreshTimeoutCount:Float;
+
+    // buffer
     private var __receiveBuffer:TCPCustomProtocol;
-    private var __curByteSize:Int;
+    private var __curReceivePayloadByteSize:Int;
 
-    // private var __sendQueue:List<>;
-    private var __sendBuffer:TCPCustomProtocol;
+    private var __receivePayloadByteSize(get, never):Null<Int>;
 
+    function get___receivePayloadByteSize():Null<Int> {
+        return __receiveBuffer.headerMap.get(__contract.payloadByteSizeHeaderName);
+    }
+
+    private var __sendQueue:List<TCPCustomProtocol>;
+
+    // state
     public var receiving(default, null):Bool;
+    public var connectCalled(default, null):Bool;
     public var connected(default, null):Bool;
     public var closed(default, null):Bool;
+    public var destroyed(default, null):Bool;
 
-    public function new() {
+    public function new(contract:TCPCustomContract) {
         __socket = new OpenFlSocket();
 
         __events = new IntMap();
+
         __events.set(SocketEventType.CONNECT, []);
         __events.set(SocketEventType.DATA, []);
         __events.set(SocketEventType.CLOSE, []);
+        __events.set(SocketEventType.CONNECT_TIMEOUT, []);
+        __events.set(SocketEventType.REFRESH_TIMEOUT, []);
+
+        __contract = contract;
 
         __receiveBuffer = {
-            header: {
-                payloadSize: 0
-            },
-            payload: new ByteArray()
-        };
-        __curByteSize = 0;
-
-        __sendBuffer = {
-            header: {
-                payloadSize: 0
-            },
+            headerMap: new StringMap(),
             payload: new ByteArray()
         };
 
-        receiving = false;
-        connected = false;
-        closed = false;
-    }
-
-    public function update():Bool {
-        if(closed) {
-            return false;
+        for(name in contract.headerOrderArray.iterator()) {
+            __receiveBuffer.headerMap.set(name, null);
         }
 
-        var receiveResult = __updateReceive();
+        __curReceivePayloadByteSize = 0;
 
-        return receiveResult;
+        __sendQueue = new List();
+
+        __connectTimeoutCount = 0;
+        __refreshTimeoutCount = 0;
+
+        receiving = false;
+        connectCalled = false;
+        connected = false;
+        closed = true;
+        destroyed = false;
     }
 
-    private function __updateReceive():Bool {
-        if(!receiving) {
-            if(!__receiveHeader()) {
-                return true;
+    public function update(elapsed:Float) {
+        if(closed || destroyed) {
+            return;
+        }
+
+        __updateReceive(elapsed);
+        __updateSend(elapsed);
+
+        if(!connected && connectCalled) {
+            if(__connectTimeoutCount > __contract.connectTimeout) {
+                dispatchEvent(SocketEventType.CONNECT_TIMEOUT);
+
+                close(false);
+            }
+            else {
+                __connectTimeoutCount += elapsed;
             }
         }
 
-        var curBytes = Std.int(Math.min(
-            __socket.bytesAvailable, __receiveBuffer.header.payloadSize - __curByteSize));
+        if(connected) {
+            if(__refreshTimeoutCount > __contract.refreshTimeout) {
+                dispatchEvent(SocketEventType.REFRESH_TIMEOUT);
 
-        if(curBytes <= 0) {
-            return true;
+                close(false);
+            }
+            else {
+                __refreshTimeoutCount += elapsed;
+            }
         }
 
-        __socket.readBytes(__receiveBuffer.payload, __curByteSize, curBytes);
-        __curByteSize += curBytes;
+        return;
+    }
 
-        if(__receiveBuffer.header.payloadSize - __curByteSize <= 0) {
+    private function __updateReceive(elapsed:Float):Bool {
+        if(!receiving) {
+            if(!__receiveHeader()) {
+                return;
+            }
+        }
+
+        var curBytes = Std.int(Math.min(__socket.bytesAvailable, __receivePayloadByteSize - __curReceivePayloadByteSize));
+
+        if(curBytes <= 0) {
+            return;
+        }
+
+        __socket.readBytes(__receiveBuffer.payload, __curReceivePayloadByteSize, curBytes);
+        __curReceivePayloadByteSize += curBytes;
+
+        __refreshTimeoutCount = 0;
+
+        if(__receivePayloadByteSize - __curReceivePayloadByteSize <= 0) {
             if(!connected) {
-                if(__receiveBuffer.payload.toString() != TCPCustomProtocolConstants.CONNECTED_MESSAGE) {
+                if(__receiveBuffer.payload.toString() != __contract.connectedMessage) {
                     receiving = false;
 
-                    return true;
+                    return;
                 }
 
                 connected = true;
@@ -106,42 +154,150 @@ class Socket {
 
                 receiving = false;
 
-                return true;
+                __connectTimeoutCount = 0;
+
+                return;
             }
-            else if(__receiveBuffer.payload.toString() == TCPCustomProtocolConstants.CLOSED_MESSAGE) {
+            else if(__receiveBuffer.payload.toString() == __contract.closeMessage) {
                 close();
 
-                return false;
+                return;
             }
 
             receiving = false;
             dispatchEvent(SocketEventType.DATA);
-
-            return true;
         }
+    }
+
+    private function __receiveHeader():Bool {
+        if(__socket.bytesAvailable < __contract.totalHeaderByteSize) {
+            return false;
+        }
+
+        // header
+        for(name in __contract.headerOrderArray.iterator()) {
+            var headerInfo = __contract.getHeaderByName(name);
+
+            switch(headerInfo.type) {
+                case HeaderType.BYTE:
+                    __receiveBuffer.headerMap.set(name, __socket.readUnsignedByte());
+
+                case HeaderType.SHORT:
+                    __receiveBuffer.headerMap.set(name, __socket.readUnsignedShort());
+
+                case HeaderType.INT:
+                    __receiveBuffer.headerMap.set(name, __socket.readUnsignedInt());
+
+                case HeaderType.VARINT: // sorry for that
+                    var bytes:ByteArray = new ByteArray(headerInfo.byteSize);
+                    __socket.readBytes(bytes, 0, headerInfo.byteSize);
+
+                    __receiveBuffer.headerMap.set(name, bytes);
+
+                case HeaderType.STRING:
+                    __receiveBuffer.headerMap.set(name, __socket.readUTFBytes(headerInfo.byteSize));
+            }
+        }
+
+        if(__receivePayloadByteSize == 0) {
+            return false;
+        }
+
+        // payload
+        __receiveBuffer.payload = new ByteArray(__receivePayloadByteSize);
+
+        __curReceivePayloadByteSize = 0;
+        receiving = true;
+
+        __refreshTimeoutCount = 0;
 
         return true;
     }
 
-    public function connect(host:String, port:Int) {
-        if(closed) {
-            throw "socket closed";
+    private function __updateSend(elapsed:Float) {
+        if(__sendQueue.length <= 0) {
+            return;
         }
 
+        var sendThingie = __sendQueue.pop();
+
+        for(name in __contract.headerOrderArray.iterator()) {
+            var headerInfo = __contract.getHeaderByName(name);
+
+            switch(headerInfo.type) {
+                case HeaderType.BYTE:
+                    __socket.writeByte(sendThingie.headerMap.get(name));
+
+                case HeaderType.SHORT:
+                    __socket.writeShort(sendThingie.headerMap.get(name));
+
+                case HeaderType.INT:
+                    __socket.writeUnsignedInt(sendThingie.headerMap.get(name));
+
+                case HeaderType.VARINT:
+                    var bytes = sendThingie.headerMap.get(name);
+                    __socket.writeBytes(bytes, 0, headerInfo.byteSize);
+
+                case HeaderType.STRING:
+                    var bytes = new ByteArray(headerInfo.byteSize);
+                    bytes.writeUTFBytes(sendThingie.headerMap.get(name));
+
+                    __socket.writeBytes(bytes, 0, headerInfo.byteSize);
+            }
+        }
+
+        var payloadByteSize = sendThingie.headerMap.get(__contract.payloadByteSizeHeaderName);
+        __socket.writeBytes(sendThingie.payload, 0, payloadByteSize);
+
+        __socket.flush();
+    }
+
+    public function connect(host:String, port:Int) {
+        if(destroyed) {
+            throw "socket destroyed";
+        }
+
+        connectCalled = true;
+        closed = false;
         __socket.connect(host, port);
     }
 
-    public function close() {
+    public function close(doDispatchEvent:Bool = true) {
+        if(destroyed) {
+            throw "socket destroyed";
+        }
+
         if(closed) {
             throw "socket closed";
         }
 
         receiving = false;
         connected = false;
+        connectCalled = false;
         closed = true;
-        __dispatchEvent(SocketEventType.CLOSE);
 
-        __socket.close();
+        if(doDispatchEvent) {
+            dispatchEvent(SocketEventType.CLOSE);
+        }
+
+        try {
+            __socket.close();
+        }
+        catch(e:Dynamic) {}
+    }
+
+    public function destroy() {
+        try {
+            close();
+        }
+        catch(e:Dynamic) {}
+
+        if(destroyed) {
+            throw "socket destroyed";
+        }
+
+        destroyed = true;
+
         __socket = null;
 
         for(key in __events.keys()) {
@@ -159,42 +315,50 @@ class Socket {
         __events = null;
     }
 
-    private function __receiveHeader():Bool {
-        if(__socket.bytesAvailable < TCPCustomProtocolConstants.HEADER_SIZE) { // protocol header size
+    public function sendBytes(header:StringMap<Dynamic>, text:String):Bool {
+        if(!connected) {
             return false;
         }
 
-        // header
-        var byteSize = __socket.readUnsignedInt();
-        __receiveBuffer.header.payloadSize = byteSize;
-
-        if(byteSize == 0) {
-            return false;
+        for(name in __contract.headerOrderArray.iterator()) {
+            if(!header.exists(name)) {
+                throw "wrong header";
+            }
         }
 
-        // payload
-        __receiveBuffer.payload = new ByteArray(byteSize);
+        var payload = ByteArray.fromBytes(Bytes.ofString(text));
 
-        __curByteSize = 0;
-        receiving = true;
+        var maxPayloadByteSize = switch(__contract.getHeaderByName(__contract.payloadByteSizeHeaderName).type) {
+            case HeaderType.BYTE:
+                255;
+
+            case HeaderType.SHORT:
+                65535;
+
+            case HeaderType.INT:
+                -1;
+        };
+        if(payload.length & maxPayloadByteSize != payload.length) {
+            throw "too long payload";
+        }
+
+        var copied = header.copy();
+        copied.set(__contract.payloadByteSizeHeaderName, payload.length);
+
+        var sendThingie:TCPCustomProtocol = {
+            headerMap: copied,
+            payload: payload
+        };
+
+        __sendQueue.add(sendThingie);
 
         return true;
     }
 
-    public function sendBytes(text:String) {
-        __sendBuffer.payload = ByteArray.fromBytes(Bytes.ofString(text));
-        __sendBuffer.header.payloadSize = __sendBuffer.payload.length;
-
-        __socket.writeUnsignedInt(__sendBuffer.header.payloadSize);
-        __socket.writeBytes(__sendBuffer.payload, 0, __sendBuffer.header.payloadSize);
-
-        __socket.flush();
-    }
-
     // event line
     public function addEventListener(socketEvent:Int, listener:Dynamic->Void, priority:Int = 10) {
-        if(closed) {
-            throw "socket closed";
+        if(destroyed) {
+            throw "socket destroyed";
         }
 
         var listeners = __events.get(socketEvent);
@@ -210,14 +374,10 @@ class Socket {
     }
 
     public function dispatchEvent(socketEvent:Int) {
-        if(closed) {
-            throw "socket closed";
+        if(destroyed) {
+            throw "socket destroyed";
         }
 
-        __dispatchEvent(socketEvent);
-    }
-
-    private function __dispatchEvent(socketEvent:Int) {
         var listeners = __events.get(socketEvent);
         if(listeners == null) {
             trace("wh");
@@ -225,31 +385,57 @@ class Socket {
             return;
         }
 
-        var socketEventData:SocketEventBase = switch(socketEvent) {
+        var socketEventData = switch(socketEvent) {
             case SocketEventType.CONNECT:
-                new SocketConnectEvent();
+                new SocketConnectEvent(
+                    __socket.localAddress,
+                    __socket.localPort,
+                    {
+                        remoteAddress: __socket.remoteAddress,
+                        remotePort: __socket.remotePort
+                    }
+                );
 
             case SocketEventType.DATA:
-                new SocketDataEvent();
+                new SocketDataEvent(
+                    __socket.localAddress,
+                    __socket.localPort,
+                    {
+                        headerMap: new ReadonlyStringMap(__receiveBuffer.headerMap.copy()),
+                        headerOrderArray: new ReadonlyArray(__contract.headerOrderArray.copy()),
+                        payload: __receiveBuffer.payload
+                    }
+                );
 
             case SocketEventType.CLOSE:
-                new SocketCloseEvent();
+                new SocketCloseEvent(
+                    __socket.localAddress,
+                    __socket.localPort
+                );
+
+            case SocketEventType.CONNECT_TIMEOUT, SocketEventType.REFRESH_TIMEOUT:
+                new SocketTimeoutEvent(
+                    __socket.localAddress,
+                    __socket.localPort
+                );
         }
 
         for(curListener in listeners) {
+            if(!socketEventData.shouldPropagate) {
+                break;
+            }
+
             if(curListener == null) {
                 continue;
             }
-
-            socketEventData.payload = __receiveBuffer.payload;
 
             curListener.listener(socketEventData);
         }
     }
 
     public function removeEventListener(socketEvent:Int, listener:Dynamic->Void):Bool {
-        if(closed) {
-            throw "socket closed";
+        if(destroyed) {
+            throw "socket destroyed";
         }
 
         var listeners = __events.get(socketEvent);
@@ -277,5 +463,4 @@ class Socket {
 typedef _SocketEventListener = {
     var priority:Int;
     var listener:Dynamic->Void;
-    var type:SocketEventType;
 }

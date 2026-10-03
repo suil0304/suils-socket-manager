@@ -1,10 +1,13 @@
 package suil0304.socket.event;
 
-// not enum Int
 class SocketEventType {
     public static final CONNECT = 0;
     public static final DATA = 1;
     public static final CLOSE = 2;
+
+    // timeout
+    public static final CONNECT_TIMEOUT = 3;
+    public static final REFRESH_TIMEOUT = 4;
 
     private function new() {}
 }

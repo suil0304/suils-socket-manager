@@ -1,14 +1,19 @@
 package suil0304.socket.event;
 
-import openfl.utils.ByteArray;
-
 class SocketEventBase {
-    public var payload:ByteArray;
+    public var localAddress:String; // shit
+    public var localPort:Int;
 
-    public var payloadString(get, never):String;
-    function get_payloadString():String {
-        return payload.toString();
+    public var shouldPropagate(default, null):Bool;
+
+    public function new(localAddress:String, localPort:Int) {
+        this.localAddress = localAddress;
+        this.localPort = localPort;
+
+        shouldPropagate = true;
     }
 
-    public function new() {}
+    public function stopPropagation() {
+        shouldPropagate = false;
+    }
 }

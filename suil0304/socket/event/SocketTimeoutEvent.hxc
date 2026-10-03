@@ -1,0 +1,5 @@
+package suil0304.socket.event;
+
+class SocketTimeoutEvent extends SocketEventBase {
+    // hmm
+}

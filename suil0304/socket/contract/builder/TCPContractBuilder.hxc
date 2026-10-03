@@ -8,7 +8,8 @@ import suil0304.socket.contract.constants.HeaderRole;
 // i love builder pattern
 // yay
 class TCPContractBuilder {
-    private var __timeout:Int = 0; // ms
+    private var __connectTimeout:Int = 0; // ms
+    private var __refreshTimeout:Int = 0; // ms
 
     // protocol
     private var __headers:Array<TCPCustomHeaderRaw>;
@@ -42,12 +43,22 @@ class TCPContractBuilder {
     }
 
     // contract
-    public function setTimeout(ms:Int):TCPContractBuilder {
+    public function setConnectTimeout(ms:Int):TCPContractBuilder {
         if(ms <= 0) {
             throw "invalid timeout";
         }
 
-        __timeout = ms;
+        __connectTimeout = ms;
+
+        return this;
+    }
+
+    public function setRefreshTimeout(ms:Int):TCPContractBuilder {
+        if(ms <= 0) {
+            throw "invalid timeout";
+        }
+
+        __refreshTimeout = ms;
 
         return this;
     }
@@ -60,7 +71,7 @@ class TCPContractBuilder {
             name: null,
             type: 0,
             byteSize: 0,
-            headerRole: 0;
+            headerRole: 0
         });
 
         __curHeaderIndex = __headers.length - 1;
@@ -93,6 +104,7 @@ class TCPContractBuilder {
             __curHeaderIndex = -1;
         }
 
+        // unique roles
         if(header.headerRole & HeaderRole.PAYLOAD_BYTE_SIZE > 0) {
             __payloadByteSizeExists = false;
         }
@@ -117,7 +129,7 @@ class TCPContractBuilder {
 
         var header = __headers[__curHeaderIndex];
 
-        header.byteSize = switch(type) {
+        header.byteSize =switch(type) {
             case HeaderType.BYTE:
                 1;
 
@@ -179,10 +191,12 @@ class TCPContractBuilder {
             trace("this header already have this role");
         }
 
-        if(
-            role == HeaderRole.PAYLOAD_BYTE_SIZE
-            && header.headerRole & HeaderRole.PAYLOAD_BYTE_SIZE == 0
-        ) {
+        // unique roles
+        if(role == HeaderRole.PAYLOAD_BYTE_SIZE && header.headerRole & HeaderRole.PAYLOAD_BYTE_SIZE == 0) {
+            if(header.type == HeaderType.STRING || header.type == HeaderType.VARINT) {
+                throw "payload byte size role is not support with this type";
+            }
+
             if(__payloadByteSizeExists) {
                 throw "duplicated payload byte size role";
             }
@@ -203,6 +217,7 @@ class TCPContractBuilder {
 
         var header = __headers[__curHeaderIndex];
 
+        // unique roles
         if(header.headerRole & HeaderRole.PAYLOAD_BYTE_SIZE > 0) {
             __payloadByteSizeExists = false;
         }
@@ -238,7 +253,11 @@ class TCPContractBuilder {
             throw "no header";
         }
 
-        if(__timeout == 0) {
+        if(__connectTimeout == 0) {
+            throw "zero ms to timeout is not support";
+        }
+
+        if(__refreshTimeout == 0) {
             throw "zero ms to timeout is not support";
         }
 
@@ -259,9 +278,11 @@ class TCPContractBuilder {
             __validateHeader();
         }
 
-        var headerMap = new StringMap<Dynamic>();
+        var headerMap = new StringMap();
         var totalHeaderByteSize = 0;
+
         var payloadByteSizeHeaderName:String;
+
         for(i in 0...__headers.length) {
             var header = __headers[i];
 
@@ -279,6 +300,10 @@ class TCPContractBuilder {
         }
 
         return new TCPCustomContract(
+            {
+                connectTimeout: __connectTimeout,
+                refreshTimeout: __refreshTimeout
+            },
             {
                 headerMap: headerMap,
                 totalHeaderByteSize: totalHeaderByteSize,

@@ -1,3 +1,18 @@
 package suil0304.socket.event;
 
-class SocketConnectEvent extends SocketEventBase {}
+class SocketConnectEvent extends SocketEventBase {
+    public var remoteAddress(default, null):String;
+    public var remotePort(default, null):Int;
+
+    public function new(localAddress:String, localPort:Int, connectionParameters:ConnectionParameters) {
+        super(localAddress, localPort);
+
+        remoteAddress = connectionParameters.remoteAddress;
+        remotePort = connectionParameters.remotePort;
+    }
+}
+
+typedef ConnectionParameters = {
+    var remoteAddress:String;
+    var remotePort:Int;
+}

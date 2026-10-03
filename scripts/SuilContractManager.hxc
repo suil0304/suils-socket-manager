@@ -60,7 +60,8 @@ class SuilContractManager extends Module {
     override function onCreate(event:ScriptEvent) {
         __tcpContractMap = new StringMap();
 
-        __tcpContractMap.set("default", createTCPContractBuilder().setTimeout(600000)
+        __tcpContractMap.set("default", createTCPContractBuilder().setConnectTimeout(600000)
+            .setRefreshTimeout(1800000)
 
             .setConnectedMessage("client connected, welcome.")
             .setCloseMessage("server closed, goodbye.")
@@ -106,7 +107,7 @@ class SuilContractManager extends Module {
                 __tcpContractMap.get(id).destroy();
             }
         }
-        catch {}
+        catch(e:Dynamic) {}
 
         for(id in ids) {
             __tcpContractMap.remove(id);

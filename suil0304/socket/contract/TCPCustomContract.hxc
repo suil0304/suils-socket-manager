@@ -1,5 +1,6 @@
 package suil0304.socket.contract;
 
+import haxe.ds.StringMap;
 import suil0304.ds.ReadonlyStringMap;
 import suil0304.ds.ReadonlyArray;
 
@@ -7,13 +8,16 @@ class TCPCustomContract {
     public var destroyed(default, null):Bool;
 
     // contract
-    public var timeout(default, null):Int = 0;
+    public var connectTimeout(default, null):Int = 0;
+
+    public var refreshTimeout(default, null):Int = 0;
 
     // protocol
     private var __headerMap:ReadonlyStringMap<TCPCustomHeader>;
+
     public var totalHeaderByteSize(default, null):Int;
 
-    private var __payloadByteSizeHeaderName:String;
+    public var payloadByteSizeHeaderName(default, null):String;
 
     public var headerOrderArray(default, null):ReadonlyArray;
 
@@ -21,19 +25,17 @@ class TCPCustomContract {
     public var connectedMessage(default, null):String;
     public var closeMessage(default, null):String;
 
-    public function new(
-        contractParameters:ContractParameters,
-        protocolParameters:ProtocolParameters,
-        handshakeParameters:HandshakeParameters
-    ) {
-        timeout = contractParameters.timeout;
+    public function new(contractParameters:ContractParameters, protocolParameters:ProtocolParameters, handshakeParameters:HandshakeParameters) {
+        connectTimeout = contractParameters.connectTimeout;
+        refreshTimeout = contractParameters.refreshTimeout;
 
-        __headerMap = new ReadonlyStringMap(protocolParameters.headerMap);
+        __headerMap = new ReadonlyStringMap(protocolParameters.headerMap.copy());
         totalHeaderByteSize = protocolParameters.totalHeaderByteSize;
-        __payloadByteSizeHeaderName = protocolParameters.payloadByteSizeHeaderName;
 
-        connectedMessage = handshakeParameters.connectedMessage;
-        closeMessage = handshakeParameters.closeMessage;
+        payloadByteSizeHeaderName = new String(protocolParameters.payloadByteSizeHeaderName);
+
+        connectedMessage = new String(handshakeParameters.connectedMessage);
+        closeMessage = new String(handshakeParameters.closeMessage);
 
         var array = [];
         for(name in __headerMap.keys()) {
@@ -77,15 +79,16 @@ class TCPCustomContract {
         if(destroyed) {
             throw "this contract is destroyed";
         }
-        
-        timeout = 0;
+
+        connectTimeout = 0;
+        refreshTimeout = 0;
 
         __headerMap.destroy();
         __headerMap = null;
 
         totalHeaderByteSize = 0;
 
-        __payloadByteSizeHeaderName = null;
+        payloadByteSizeHeaderName = null;
 
         headerOrderArray.destroy();
         headerOrderArray = null;
@@ -105,12 +108,14 @@ typedef TCPCustomHeader = {
 
 // parameter
 typedef ContractParameters = {
-    var timeout:Int;
+    var connectTimeout:Int;
+    var refreshTimeout:Int;
 }
 
 typedef ProtocolParameters = {
     var headerMap:StringMap<TCPCustomHeader>;
     var totalHeaderByteSize:Int;
+
     var payloadByteSizeHeaderName:String;
 }
 
