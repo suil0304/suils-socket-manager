@@ -181,7 +181,7 @@ class Socket {
         return true;
     }
 
-    public function sendSuildBytes(text:String) {
+    public function sendBytes(text:String) {
         __sendBuffer.payload = ByteArray.fromBytes(Bytes.ofString(text));
         __sendBuffer.header.payloadSize = __sendBuffer.payload.length;
 

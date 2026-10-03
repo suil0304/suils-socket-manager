@@ -29,7 +29,7 @@ class SuilSocketManager extends Module {
     private var __socketMap:StringMap<Socket>;
 
     public function new() {
-        super("suil-socket-manager", 0);
+        super("suil-socket-manager", 1);
     }
 
     override function onCreate(event:ScriptEvent) {
@@ -75,7 +75,7 @@ class SuilSocketManager extends Module {
         return true;
     }
 
-    public function sendSuildBytes(id:String, text:String):Bool {
+    public function sendBytes(id:String, text:String):Bool {
         if(!__socketMap.exists(id)) {
             return false;
         }
@@ -85,7 +85,7 @@ class SuilSocketManager extends Module {
             return false;
         }
 
-        socket.sendSuildBytes(text);
+        socket.sendBytes(text);
 
         return true;
     }
