@@ -1,0 +1,81 @@
+package suil0304.ds;
+
+import haxe.ds.StringMap;
+
+class ReadonlyStringMap {
+    public var destroyed(default, null):Bool;
+    private var __map:StringMap<Dynamic>; // aw
+
+    public function new(map:StringMap<Dynamic>) {
+        __map = map;
+
+        destroyed = false;
+    }
+
+    public function copy() {
+        if(destroyed) {
+            throw "this map is destroyed";
+        }
+
+        return __map.copy();
+    }
+
+    public function exists(key:String) {
+        if(destroyed) {
+            throw "this map is destroyed";
+        }
+
+        return __map.exists(key);
+    }
+
+    public function get(key:String) {
+        if(destroyed) {
+            throw "this map is destroyed";
+        }
+
+        return __map.get(key);
+    }
+
+    public function iterator() {
+        if(destroyed) {
+            throw "this map is destroyed";
+        }
+
+        return __map.iterator();
+    }
+
+    public function keyValueIterator() {
+        if(destroyed) {
+            throw "this map is destroyed";
+        }
+
+        return __map.keyValueIterator();
+    }
+
+    public function keys() {
+        if(destroyed) {
+            throw "this map is destroyed";
+        }
+
+        return __map.keys();
+    }
+
+    public function toString() {
+        if(destroyed) {
+            throw "this map is destroyed";
+        }
+
+        return __map.toString();
+    }
+
+    public function destroy() {
+        if(destroyed) {
+            throw "this map is destroyed";
+        }
+
+        __map.clear();
+        __map = null;
+
+        destroyed = true;
+    }
+}

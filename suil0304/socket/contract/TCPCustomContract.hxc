@@ -1,17 +1,18 @@
 package suil0304.socket.contract;
 
-import haxe.ds.StringMap;
+import suil0304.ds.ReadonlyStringMap;
+import suil0304.ds.ReadonlyArray;
 
 class TCPCustomContract {
     public var timeout(default, null):Int = 0;
 
     // protocol
-    private var __headerMap:StringMap<TCPCustomHeader>;
+    private var __headerMap:ReadonlyStringMap<TCPCustomHeader>;
     public var totalHeaderByteSize(default, null):Int;
 
     private var __payloadByteSizeHeaderName:String;
 
-    public var headerOrderArray(default, null):Array<String>;
+    public var headerOrderArray(default, null):ReadonlyArray;
 
     // handshakes
     public var connectedMessage(default, null):String;
@@ -24,21 +25,23 @@ class TCPCustomContract {
     ) {
         timeout = contractParameters.timeout;
 
-        __headerMap = protocolParameters.headerMap;
+        __headerMap = new ReadonlyStringMap(protocolParameters.headerMap);
         totalHeaderByteSize = protocolParameters.totalHeaderByteSize;
         __payloadByteSizeHeaderName = protocolParameters.payloadByteSizeHeaderName;
 
         connectedMessage = handshakeParameters.connectedMessage;
         closeMessage = handshakeParameters.closeMessage;
 
-        headerOrderArray = [];
+        var array = [];
         for(name in __headerMap.keys()) {
-            headerOrderArray.push(name);
+            array.push(name);
         }
 
-        headerOrderArray.sort((a, b) -> {
+        array.sort((a, b) -> {
             return __headerMap.get(a).order - __headerMap.get(b).order;
         });
+
+        headerOrderArray = new ReadonlyArray(array);
     }
 
     public function getHeaderByIndex(index:Int):TCPCustomHeader {
