@@ -140,9 +140,17 @@ class SuilSocketManager extends Module {
 
         var socket = __socketMap.get(id);
 
-        socket.removeEventListener(socketEvent, listener);
+        return socket.removeEventListener(socketEvent, listener);
+    }
 
-        return true;
+    public function willTrigger(id:String, socketEvent:Int):Bool {
+        if(!__socketMap.exists(id)) {
+            return false;
+        }
+
+        var socket = __socketMap.get(id);
+
+        return socket.willTrigger(socketEvent);
     }
 
     override function onUpdate(event:UpdateScriptEvent) {

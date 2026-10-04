@@ -458,6 +458,14 @@ class Socket {
 
         return removed;
     }
+
+    public function willTrigger(socketEvent:Int):Bool {
+        if(destroyed) {
+            throw "socket destroyed";
+        }
+
+        return __events.get(socketEvent).length > 0;
+    }
 }
 
 typedef _SocketEventListener = {
