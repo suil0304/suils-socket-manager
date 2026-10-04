@@ -1,4 +1,6 @@
-package suil0304.socket.event;
+package suil0304.socket.event.tcp;
+
+import suil0304.socket.event.SocketEventBase;
 
 class SocketConnectEvent extends SocketEventBase {
     public var remoteAddress(default, null):String;

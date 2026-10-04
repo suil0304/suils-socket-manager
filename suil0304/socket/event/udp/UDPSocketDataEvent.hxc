@@ -1,0 +1,26 @@
+package suil0304.socket.event.udp;
+
+import suil0304.socket.event.SocketEventBase;
+import suil0304.ds.ReadonlyArray;
+import suil0304.ds.ReadonlyStringMap;
+import openfl.utils.ByteArray;
+
+class UDPSocketDataEvent extends SocketEventBase {
+    public var headerMap(default, null):ReadonlyStringMap;
+    public var headerOrderArray(default, null):ReadonlyArray;
+
+    public var data(default, null):String;
+
+    public function new(localAddress:String, localPort:Int, dataParameters:DataParameters) {
+        super(localAddress, localPort);
+
+        headerMap = dataParameters.headerMap;
+        headerOrderArray = dataParameters.headerOrderArray;
+
+        data = dataParameters.data.toString();
+    }
+}
+
+typedef DataParameters = {
+    var data:ByteArray;
+}

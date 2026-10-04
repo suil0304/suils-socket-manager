@@ -1,5 +1,6 @@
-package suil0304.socket.event;
+package suil0304.socket.event.tcp;
 
+import suil0304.socket.event.SocketEventBase;
 import suil0304.ds.ReadonlyArray;
 import suil0304.ds.ReadonlyStringMap;
 import openfl.utils.ByteArray;

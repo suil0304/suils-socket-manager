@@ -1,5 +1,0 @@
-package suil0304.socket.event;
-
-class SocketCloseEvent extends SocketEventBase {
-    // hmm
-}

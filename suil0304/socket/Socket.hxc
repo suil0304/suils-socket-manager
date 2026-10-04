@@ -10,13 +10,12 @@ import suil0304.ds.ReadonlyStringMap;
 import haxe.io.Bytes;
 import openfl.net.Socket as OpenFlSocket;
 import openfl.utils.ByteArray;
-// socket.event
-import suil0304.socket.event.SocketEventType;
-import suil0304.socket.event.SocketEventBase;
-import suil0304.socket.event.SocketConnectEvent;
-import suil0304.socket.event.SocketDataEvent;
-import suil0304.socket.event.SocketCloseEvent;
-import suil0304.socket.event.SocketTimeoutEvent;
+// socket.event.tcp
+import suil0304.socket.event.tcp.TCPSocketEventType;
+import suil0304.socket.event.tcp.SocketConnectEvent;
+import suil0304.socket.event.tcp.SocketDataEvent;
+import suil0304.socket.event.tcp.SocketCloseEvent;
+import suil0304.socket.event.tcp.SocketTimeoutEvent;
 // socket.contract
 import suil0304.socket.contract.TCPCustomContract;
 import suil0304.socket.contract.constants.HeaderType;
@@ -59,11 +58,11 @@ class Socket {
 
         __events = new IntMap();
 
-        __events.set(SocketEventType.CONNECT, []);
-        __events.set(SocketEventType.DATA, []);
-        __events.set(SocketEventType.CLOSE, []);
-        __events.set(SocketEventType.CONNECT_TIMEOUT, []);
-        __events.set(SocketEventType.REFRESH_TIMEOUT, []);
+        __events.set(TCPSocketEventType.CONNECT, []);
+        __events.set(TCPSocketEventType.DATA, []);
+        __events.set(TCPSocketEventType.CLOSE, []);
+        __events.set(TCPSocketEventType.CONNECT_TIMEOUT, []);
+        __events.set(TCPSocketEventType.REFRESH_TIMEOUT, []);
 
         __socket.timeout = contract.connectTimeout;
 
@@ -102,7 +101,7 @@ class Socket {
 
         if(!connected && connectCalled) {
             if(__connectTimeoutCount > __contract.connectTimeout) {
-                dispatchEvent(SocketEventType.CONNECT_TIMEOUT);
+                dispatchEvent(TCPSocketEventType.CONNECT_TIMEOUT);
 
                 close(false);
             }
@@ -113,7 +112,7 @@ class Socket {
 
         if(connected) {
             if(__refreshTimeoutCount > __contract.refreshTimeout) {
-                dispatchEvent(SocketEventType.REFRESH_TIMEOUT);
+                dispatchEvent(TCPSocketEventType.REFRESH_TIMEOUT);
 
                 close(false);
             }
@@ -152,7 +151,7 @@ class Socket {
                 }
 
                 connected = true;
-                dispatchEvent(SocketEventType.CONNECT);
+                dispatchEvent(TCPSocketEventType.CONNECT);
 
                 receiving = false;
 
@@ -167,7 +166,7 @@ class Socket {
             }
 
             receiving = false;
-            dispatchEvent(SocketEventType.DATA);
+            dispatchEvent(TCPSocketEventType.DATA);
         }
     }
 
@@ -279,7 +278,7 @@ class Socket {
         closed = true;
 
         if(doDispatchEvent) {
-            dispatchEvent(SocketEventType.CLOSE);
+            dispatchEvent(TCPSocketEventType.CLOSE);
         }
 
         try {
@@ -388,7 +387,7 @@ class Socket {
         }
 
         var socketEventData = switch(socketEvent) {
-            case SocketEventType.CONNECT:
+            case TCPSocketEventType.CONNECT:
                 new SocketConnectEvent(
                     __socket.localAddress,
                     __socket.localPort,
@@ -398,7 +397,7 @@ class Socket {
                     }
                 );
 
-            case SocketEventType.DATA:
+            case TCPSocketEventType.DATA:
                 new SocketDataEvent(
                     __socket.localAddress,
                     __socket.localPort,
@@ -409,13 +408,13 @@ class Socket {
                     }
                 );
 
-            case SocketEventType.CLOSE:
+            case TCPSocketEventType.CLOSE:
                 new SocketCloseEvent(
                     __socket.localAddress,
                     __socket.localPort
                 );
 
-            case SocketEventType.CONNECT_TIMEOUT, SocketEventType.REFRESH_TIMEOUT:
+            case TCPSocketEventType.CONNECT_TIMEOUT, TCPSocketEventType.REFRESH_TIMEOUT:
                 new SocketTimeoutEvent(
                     __socket.localAddress,
                     __socket.localPort

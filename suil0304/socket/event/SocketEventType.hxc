@@ -5,9 +5,5 @@ class SocketEventType {
     public static final DATA = 1;
     public static final CLOSE = 2;
 
-    // timeout
-    public static final CONNECT_TIMEOUT = 3;
-    public static final REFRESH_TIMEOUT = 4;
-
     private function new() {}
 }

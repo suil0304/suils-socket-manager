@@ -2,80 +2,78 @@ import haxe.ds.StringMap;
 import funkin.modding.events.ScriptEvent;
 import funkin.modding.module.Module;
 // socket
-import suil0304.socket.Socket;
-// socket.event.tcp
-import suil0304.socket.event.tcp.TCPSocketEventType;
-// socket.contract
-import suil0304.socket.contract.TCPCustomContract;
+import suil0304.socket.DatagramSocket;
+// socket.event
+import suil0304.socket.event.SocketEventType;
 
-class SuilSocketManager extends Module {
+// + dont use it
+class SuilUDPSocketManager extends Module {
     // enum shit
     public var CONNECT(get, never):Int;
 
     function get_CONNECT():Int {
-        return TCPSocketEventType.CONNECT;
+        return SocketEventType.CONNECT;
     }
 
     public var DATA(get, never):Int;
 
     function get_DATA():Int {
-        return TCPSocketEventType.DATA;
+        return SocketEventType.DATA;
     }
 
     public var CLOSE(get, never):Int;
 
     function get_CLOSE():Int {
-        return TCPSocketEventType.CLOSE;
-    }
-
-    public var CONNECT_TIMEOUT(get, never):Int;
-
-    function get_CONNECT_TIMEOUT():Int {
-        return TCPSocketEventType.CONNECT_TIMEOUT;
-    }
-
-    public var REFRESH_TIMEOUT(get, never):Int;
-
-    function get_REFRESH_TIMEOUT():Int {
-        return TCPSocketEventType.REFRESH_TIMEOUT;
+        return SocketEventType.CLOSE;
     }
 
     // socket manager
-    private var __socketMap:StringMap<Socket>;
+    private var __socketMap:StringMap<DatagramSocket>;
 
     public function new() {
-        super("suil-socket-manager", 1);
+        super("suil-udp-socket-manager", 2);
     }
 
     override function onCreate(event:ScriptEvent) {
         __socketMap = new StringMap();
     }
 
-    public function createSocket(id:String, schema:TCPCustomContract):Bool {
+    public function createSocket(id:String):Bool {
         if(__socketMap.exists(id)) {
             return false;
         }
 
-        var socket = new Socket(schema);
+        var socket = new DatagramSocket();
         __socketMap.set(id, socket);
 
         return true;
     }
 
-    public function connectSocket(id:String, host:String, port:Int):Bool {
+    public function bindSocket(id:String, localPort:Int = 0, localAddress:String = "0.0.0.0"):Bool {
         if(!__socketMap.exists(id)) {
             return false;
         }
 
         var socket = __socketMap.get(id);
-        if(socket.connected) {
-            return false;
-        }
-
-        socket.connect(host, port);
+        socket.bind(localPort, localAddress);
 
         return true;
     }
+
+    // public function connectSocket(id:String, host:String, port:Int):Bool {
+    //     if(!__socketMap.exists(id)) {
+    //         return false;
+    //     }
+
+    //     var socket = __socketMap.get(id);
+    //     if(socket.connected) {
+    //         return false;
+    //     }
+
+    //     socket.connect(host, port);
+
+    //     return true;
+    // }
 
     public function closeSocket(id:String):Bool {
         if(!__socketMap.exists(id)) {
@@ -83,38 +81,30 @@ class SuilSocketManager extends Module {
         }
 
         var socket = __socketMap.get(id);
-        if(socket.closed) {
-            return false;
-        }
-
         socket.close();
-
-        return true;
-    }
-
-    public function destroySocket(id:String):Bool {
-        if(!__socketMap.exists(id)) {
-            return false;
-        }
-
-        var socket = __socketMap.get(id);
-        socket.destroy();
         __socketMap.remove(id);
 
         return true;
     }
 
-    public function sendBytes(id:String, header:StringMap<Dynamic>, text:String):Bool {
+    public function send(id:String, text:String, address:Null<String> = null, port:Int = 0):Bool {
         if(!__socketMap.exists(id)) {
             return false;
         }
 
         var socket = __socketMap.get(id);
-        if(!socket.connected) {
+        socket.send(text, address, port);
+
+        return true;
+    }
+
+    public function receive(id:String):Bool {
+        if(!__socketMap.exists(id)) {
             return false;
         }
 
-        socket.sendBytes(header, text);
+        var socket = __socketMap.get(id);
+        socket.receive();
 
         return true;
     }
@@ -153,11 +143,11 @@ class SuilSocketManager extends Module {
         return socket.willTrigger(socketEvent);
     }
 
-    override function onUpdate(event:UpdateScriptEvent) {
-        for(id => socket in __socketMap.keyValueIterator()) {
-            socket.update(event.elapsed);
-        }
-    }
+    // override function onUpdate(event:UpdateScriptEvent) {
+    //     for(id => socket in __socketMap.keyValueIterator()) {
+    //         socket.update(event.elapsed);
+    //     }
+    // }
 
     override function onDestroy(event:ScriptEvent) {
         var ids:Array<String> = [];
@@ -166,7 +156,7 @@ class SuilSocketManager extends Module {
             ids.push(id);
 
             try {
-                __socketMap.get(id).destroy();
+                __socketMap.get(id).close();
             }
             catch(e:Dynamic) {}
         }
