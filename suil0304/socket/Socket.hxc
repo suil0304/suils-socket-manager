@@ -208,6 +208,14 @@ class Socket {
 
         __refreshTimeoutCount = 0;
 
+        if(__receivePayloadByteSize <= 0) {
+            dispatchEvent(TCPSocketEventType.DATA);
+
+            receiving = false;
+
+            return false;
+        }
+
         return true;
     }
 
