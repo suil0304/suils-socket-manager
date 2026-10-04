@@ -72,10 +72,10 @@ Run FNF from Command Prompt.
 ### TCP
 #### Test Codes
 ***Funkin' Client Script***
-![TCP Client Code](./docs/test-codes/tcp-client.md)
+[TCP Client Code](./docs/test-codes/tcp-client.md)
 
 ***Server Code***
-![TCP Server Code](./docs/test-codes/tcp-server.md)
+[TCP Server Code](./docs/test-codes/tcp-server.md)
 
 #### Expected Output
 ***FNF***
@@ -102,10 +102,10 @@ Received: echo thing
 ### UDP
 #### Test Codes
 ***Funkin' Client Script***
-![UDP Client Code](./docs/test-codes/udp-client.md)
+[UDP Client Code](./docs/test-codes/udp-client.md)
 
 ***Server Code***
-![UDP Server Code](./docs/test-codes/udp-server.md)
+[UDP Server Code](./docs/test-codes/udp-server.md)
 
 #### Expected Output
 ***FNF***

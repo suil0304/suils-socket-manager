@@ -72,7 +72,7 @@ You should create your socket first.
 ##### Returns
 `Bool`
 
-If connected successfully, it returns true.
+If connect called successfully, it returns true.
 Else, it returns false.
 
 #### closeSocket
