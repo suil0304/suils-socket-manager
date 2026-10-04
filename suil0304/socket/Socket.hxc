@@ -106,7 +106,7 @@ class Socket {
                 close(false);
             }
             else {
-                __connectTimeoutCount += elapsed;
+                __connectTimeoutCount += elapsed * 1000;
             }
         }
 
@@ -117,7 +117,7 @@ class Socket {
                 close(false);
             }
             else {
-                __refreshTimeoutCount += elapsed;
+                __refreshTimeoutCount += elapsed * 1000;
             }
         }
 
