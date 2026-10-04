@@ -200,10 +200,6 @@ class Socket {
             }
         }
 
-        if(__receivePayloadByteSize == 0) {
-            return false;
-        }
-
         // payload
         __receiveBuffer.payload = new ByteArray(__receivePayloadByteSize);
 
