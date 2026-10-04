@@ -124,7 +124,7 @@ class Socket {
         return;
     }
 
-    private function __updateReceive(elapsed:Float):Bool {
+    private function __updateReceive(elapsed:Float) {
         if(!receiving) {
             if(!__receiveHeader()) {
                 return;
