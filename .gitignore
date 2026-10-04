@@ -1,3 +1,5 @@
 .haxelib
 .DS_Store
 export/
+
+scripts/TestModule.hxc

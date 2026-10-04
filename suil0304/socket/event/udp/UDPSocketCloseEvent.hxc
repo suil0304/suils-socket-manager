@@ -1,0 +1,7 @@
+package suil0304.socket.event.udp;
+
+import suil0304.socket.event.SocketEventBase;
+
+class UDPSocketCloseEvent extends SocketEventBase {
+    // hmm
+}

@@ -1,0 +1,28 @@
+package suil0304.socket.event.tcp;
+
+import suil0304.socket.event.SocketEventBase;
+import suil0304.ds.ReadonlyArray;
+import suil0304.ds.ReadonlyStringMap;
+import openfl.utils.ByteArray;
+
+class SocketDataEvent extends SocketEventBase {
+    public var headerMap(default, null):ReadonlyStringMap;
+    public var headerOrderArray(default, null):ReadonlyArray;
+
+    public var payloadString(default, null):String;
+
+    public function new(localAddress:String, localPort:Int, protocolParameters:ProtocolParameters) {
+        super(localAddress, localPort);
+
+        headerMap = protocolParameters.headerMap;
+        headerOrderArray = protocolParameters.headerOrderArray;
+
+        payloadString = protocolParameters.payload.toString();
+    }
+}
+
+typedef ProtocolParameters = {
+    var headerMap:ReadonlyStringMap;
+    var headerOrderArray:ReadonlyArray;
+    var payload:ByteArray;
+}

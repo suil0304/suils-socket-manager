@@ -1,0 +1,327 @@
+package suil0304.socket.contract.builder;
+
+import haxe.ds.StringMap;
+import suil0304.socket.contract.TCPCustomContract;
+import suil0304.socket.contract.constants.HeaderType;
+import suil0304.socket.contract.constants.HeaderRole;
+
+// i love builder pattern
+// yay
+class TCPContractBuilder {
+    private var __connectTimeout:Int = 0; // ms
+    private var __refreshTimeout:Int = 0; // ms
+
+    // protocol
+    private var __headers:Array<TCPCustomHeaderRaw>;
+
+    // handshake
+    private var __connectedMessage:Null<String>;
+    private var __closeMessage:Null<String>;
+
+    // builder field
+    private var __curHeaderIndex:Int;
+
+    // builder state
+    private var __payloadByteSizeExists:Bool;
+
+    public function new() {
+        __headers = [];
+        __curHeaderIndex = -1;
+    }
+
+    // validate
+    private function __validateHeader() {
+        if(__headers.length > 0) {
+            var header = __headers[__curHeaderIndex];
+            if(header.name == null) {
+                throw "no header name";
+            }
+            else if(header.byteSize < 1) {
+                throw "invalid header byte size";
+            }
+        }
+    }
+
+    // contract
+    public function setConnectTimeout(ms:Int):TCPContractBuilder {
+        if(ms <= 0) {
+            throw "invalid timeout";
+        }
+
+        __connectTimeout = ms;
+
+        return this;
+    }
+
+    public function setRefreshTimeout(ms:Int):TCPContractBuilder {
+        if(ms <= 0) {
+            throw "invalid timeout";
+        }
+
+        __refreshTimeout = ms;
+
+        return this;
+    }
+
+    // protocol
+    public function addHeader():TCPContractBuilder {
+        __validateHeader();
+
+        __headers.push({
+            name: null,
+            type: 0,
+            byteSize: 0,
+            headerRole: 0
+        });
+
+        __curHeaderIndex = __headers.length - 1;
+
+        return this;
+    }
+
+    public function setHeaderIndex(index:Int = 0):TCPContractBuilder {
+        if(index < 0 || index + 1 > __headers.length) {
+            throw "invalid index";
+        }
+
+        __validateHeader();
+
+        __curHeaderIndex = index;
+
+        return this;
+    }
+
+    public function popHeader():TCPContractBuilder {
+        if(__headers.length <= 0) {
+            throw "no header";
+        }
+
+        var header = __headers.pop();
+        if(__headers.length > 0) {
+            __curHeaderIndex = Std.int(Math.min(__headers.length - 1, __curHeaderIndex));
+        }
+        else {
+            __curHeaderIndex = -1;
+        }
+
+        // unique roles
+        if(header.headerRole & HeaderRole.PAYLOAD_BYTE_SIZE > 0) {
+            __payloadByteSizeExists = false;
+        }
+
+        return this;
+    }
+
+    public function setHeaderName(name:String):TCPContractBuilder {
+        if(__headers.length <= 0) {
+            throw "no header";
+        }
+
+        __headers[__curHeaderIndex].name = name;
+
+        return this;
+    }
+
+    public function setHeaderType(type:Int):TCPContractBuilder {
+        if(__headers.length <= 0) {
+            throw "no header";
+        }
+
+        var header = __headers[__curHeaderIndex];
+
+        header.byteSize =switch(type) {
+            case HeaderType.BYTE:
+                1;
+
+            case HeaderType.SHORT:
+                2;
+
+            case HeaderType.INT:
+                4;
+
+            case HeaderType.VARINT: // var
+                4;
+
+            case HeaderType.STRING: // var
+                20;
+
+            default:
+                throw "invalid header type";
+        }
+        header.type = type;
+
+        return this;
+    }
+
+    public function setHeaderByteSize(byteSize:Int):TCPContractBuilder {
+        if(__headers.length <= 0) {
+            throw "no header";
+        }
+
+        if(byteSize < 1) {
+            throw "invalid header byte size";
+        }
+
+        var header = __headers[__curHeaderIndex];
+
+        switch(header.type) {
+            case HeaderType.VARINT, HeaderType.STRING:
+
+            default:
+                throw "changing byte size is not support for this header type";
+        }
+
+        header.byteSize = byteSize;
+
+        return this;
+    }
+
+    public function addHeaderRole(role:Int):TCPContractBuilder {
+        if(__headers.length <= 0) {
+            throw "no header";
+        }
+
+        if(role < 0) {
+            throw "invalid role";
+        }
+
+        var header = __headers[__curHeaderIndex];
+
+        if(header.headerRole & role > 0) {
+            trace("this header already have this role");
+        }
+
+        // unique roles
+        if(role == HeaderRole.PAYLOAD_BYTE_SIZE && header.headerRole & HeaderRole.PAYLOAD_BYTE_SIZE == 0) {
+            if(header.type == HeaderType.STRING || header.type == HeaderType.VARINT) {
+                throw "payload byte size role is not support with this type";
+            }
+
+            if(__payloadByteSizeExists) {
+                throw "duplicated payload byte size role";
+            }
+            else {
+                __payloadByteSizeExists = true;
+            }
+        }
+
+        header.headerRole = header.headerRole | role;
+
+        return this;
+    }
+
+    public function resetHeaderRole():TCPContractBuilder {
+        if(__headers.length <= 0) {
+            throw "no header";
+        }
+
+        var header = __headers[__curHeaderIndex];
+
+        // unique roles
+        if(header.headerRole & HeaderRole.PAYLOAD_BYTE_SIZE > 0) {
+            __payloadByteSizeExists = false;
+        }
+
+        header.headerRole = 0;
+
+        return this;
+    }
+
+    // handshake
+    public function setConnectedMessage(message:String):TCPContractBuilder {
+        if(message == null) {
+            throw "invalid message";
+        }
+
+        __connectedMessage = message;
+
+        return this;
+    }
+
+    public function setCloseMessage(message:String):TCPContractBuilder {
+        if(message == null) {
+            throw "invalid message";
+        }
+
+        __closeMessage = message;
+
+        return this;
+    }
+
+    public function build():TCPCustomContract {
+        if(__headers.length <= 0) {
+            throw "no header";
+        }
+
+        if(__connectTimeout == 0) {
+            throw "zero ms to timeout is not support";
+        }
+
+        if(__refreshTimeout == 0) {
+            throw "zero ms to timeout is not support";
+        }
+
+        if(__connectedMessage == null) {
+            throw "invalid connected message";
+        }
+
+        if(__closeMessage == null) {
+            throw "invalid close message";
+        }
+
+        if(!__payloadByteSizeExists) {
+            throw "no payload byte size header";
+        }
+
+        for(i in 0...__headers.length) {
+            __curHeaderIndex = i;
+            __validateHeader();
+        }
+
+        var headerMap = new StringMap();
+        var totalHeaderByteSize = 0;
+
+        var payloadByteSizeHeaderName:String;
+
+        for(i in 0...__headers.length) {
+            var header = __headers[i];
+
+            headerMap.set(header.name, {
+                type: header.type,
+                byteSize: header.byteSize,
+                order: i
+            });
+
+            totalHeaderByteSize += header.byteSize;
+
+            if(header.headerRole & HeaderRole.PAYLOAD_BYTE_SIZE > 0) {
+                payloadByteSizeHeaderName = header.name;
+            }
+        }
+
+        return new TCPCustomContract(
+            {
+                connectTimeout: __connectTimeout,
+                refreshTimeout: __refreshTimeout
+            },
+            {
+                headerMap: headerMap,
+                totalHeaderByteSize: totalHeaderByteSize,
+                payloadByteSizeHeaderName: payloadByteSizeHeaderName
+            },
+            {
+                connectedMessage: __connectedMessage,
+                closeMessage: __closeMessage
+            }
+        );
+    }
+}
+
+typedef TCPCustomHeaderRaw = {
+    var name:Null<String>;
+    var type:Int; // sick
+    var byteSize:Int;
+
+    // role
+    var headerRole:Int;
+}

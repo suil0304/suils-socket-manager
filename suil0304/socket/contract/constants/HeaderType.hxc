@@ -1,0 +1,14 @@
+package suil0304.socket.contract.constants;
+
+class HeaderType {
+    // integer
+    public static final BYTE = 0;
+    public static final SHORT = 1;
+    public static final INT = 2;
+    public static final VARINT = 3;
+
+    // string
+    public static final STRING = 4;
+
+    private function new() {}
+}

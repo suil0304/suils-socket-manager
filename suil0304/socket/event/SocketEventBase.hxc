@@ -1,0 +1,19 @@
+package suil0304.socket.event;
+
+class SocketEventBase {
+    public var localAddress:String; // shit
+    public var localPort:Int;
+
+    public var shouldPropagate(default, null):Bool;
+
+    public function new(localAddress:String, localPort:Int) {
+        this.localAddress = localAddress;
+        this.localPort = localPort;
+
+        shouldPropagate = true;
+    }
+
+    public function stopPropagation() {
+        shouldPropagate = false;
+    }
+}

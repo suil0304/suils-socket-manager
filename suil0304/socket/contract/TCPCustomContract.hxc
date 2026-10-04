@@ -1,0 +1,125 @@
+package suil0304.socket.contract;
+
+import haxe.ds.StringMap;
+import suil0304.ds.ReadonlyStringMap;
+import suil0304.ds.ReadonlyArray;
+
+class TCPCustomContract {
+    public var destroyed(default, null):Bool;
+
+    // contract
+    public var connectTimeout(default, null):Int = 0;
+
+    public var refreshTimeout(default, null):Int = 0;
+
+    // protocol
+    private var __headerMap:ReadonlyStringMap<TCPCustomHeader>;
+
+    public var totalHeaderByteSize(default, null):Int;
+
+    public var payloadByteSizeHeaderName(default, null):String;
+
+    public var headerOrderArray(default, null):ReadonlyArray;
+
+    // handshakes
+    public var connectedMessage(default, null):String;
+    public var closeMessage(default, null):String;
+
+    public function new(contractParameters:ContractParameters, protocolParameters:ProtocolParameters, handshakeParameters:HandshakeParameters) {
+        connectTimeout = contractParameters.connectTimeout;
+        refreshTimeout = contractParameters.refreshTimeout;
+
+        __headerMap = new ReadonlyStringMap(protocolParameters.headerMap.copy());
+        totalHeaderByteSize = protocolParameters.totalHeaderByteSize;
+
+        payloadByteSizeHeaderName = new String(protocolParameters.payloadByteSizeHeaderName);
+
+        connectedMessage = new String(handshakeParameters.connectedMessage);
+        closeMessage = new String(handshakeParameters.closeMessage);
+
+        var array = [];
+        for(name in __headerMap.keys()) {
+            array.push(name);
+        }
+
+        array.sort((a, b) -> {
+            return __headerMap.get(a).order - __headerMap.get(b).order;
+        });
+
+        headerOrderArray = new ReadonlyArray(array);
+
+        destroyed = false;
+    }
+
+    public function getHeaderByIndex(index:Int):TCPCustomHeader {
+        if(destroyed) {
+            throw "this contract is destroyed";
+        }
+
+        if(index < 0 || index + 1 > headerOrderArray.length) {
+            throw "invalid index";
+        }
+
+        return __headerMap.get(headerOrderArray[index]);
+    }
+
+    public function getHeaderByName(name:String):TCPCustomHeader {
+        if(destroyed) {
+            throw "this contract is destroyed";
+        }
+
+        if(!__headerMap.exists(name)) {
+            throw "invalid name";
+        }
+
+        return __headerMap.get(name);
+    }
+
+    public function destroy() {
+        if(destroyed) {
+            throw "this contract is destroyed";
+        }
+
+        connectTimeout = 0;
+        refreshTimeout = 0;
+
+        __headerMap.destroy();
+        __headerMap = null;
+
+        totalHeaderByteSize = 0;
+
+        payloadByteSizeHeaderName = null;
+
+        headerOrderArray.destroy();
+        headerOrderArray = null;
+
+        connectedMessage = null;
+        closeMessage = null;
+
+        destroyed = true;
+    }
+}
+
+typedef TCPCustomHeader = {
+    var type:Int;
+    var byteSize:Int;
+    var order:Int;
+}
+
+// parameter
+typedef ContractParameters = {
+    var connectTimeout:Int;
+    var refreshTimeout:Int;
+}
+
+typedef ProtocolParameters = {
+    var headerMap:StringMap<TCPCustomHeader>;
+    var totalHeaderByteSize:Int;
+
+    var payloadByteSizeHeaderName:String;
+}
+
+typedef HandshakeParameters = {
+    var connectedMessage:String;
+    var closeMessage:String;
+}

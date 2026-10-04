@@ -1,0 +1,11 @@
+package suil0304.socket.event.tcp;
+
+import suil0304.socket.event.SocketEventType;
+
+class TCPSocketEventType extends SocketEventType {
+    // timeout
+    public static final CONNECT_TIMEOUT = 3;
+    public static final REFRESH_TIMEOUT = 4;
+
+    private function new() {}
+}

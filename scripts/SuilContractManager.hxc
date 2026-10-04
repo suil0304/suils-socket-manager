@@ -1,0 +1,118 @@
+import funkin.modding.events.ScriptEvent;
+import funkin.modding.module.Module;
+import haxe.ds.StringMap;
+// socket.contract
+import suil0304.socket.contract.TCPCustomContract;
+import suil0304.socket.contract.constants.HeaderType;
+import suil0304.socket.contract.constants.HeaderRole;
+// socket.contract.builder
+import suil0304.socket.contract.builder.TCPContractBuilder;
+
+class SuilContractManager extends Module {
+    // enum shit
+    // header types
+    public var BYTE_HEADER_TYPE(get, never):Int;
+
+    function get_BYTE_HEADER_TYPE():Int {
+        return HeaderType.BYTE;
+    }
+
+    public var SHORT_HEADER_TYPE(get, never):Int;
+
+    function get_SHORT_HEADER_TYPE():Int {
+        return HeaderType.SHORT;
+    }
+
+    public var INT_HEADER_TYPE(get, never):Int;
+
+    function get_INT_HEADER_TYPE():Int {
+        return HeaderType.INT;
+    }
+
+    public var VARINT_HEADER_TYPE(get, never):Int;
+
+    function get_VARINT_HEADER_TYPE():Int {
+        return HeaderType.VARINT;
+    }
+
+    public var STRING_HEADER_TYPE(get, never):Int;
+
+    function get_STRING_HEADER_TYPE():Int {
+        return HeaderType.STRING;
+    }
+
+    // header roles (bit flags)
+    public var PAYLOAD_BYTE_SIZE_HEADER_ROLE(get, never):Int;
+
+    function get_PAYLOAD_BYTE_SIZE_HEADER_ROLE():Int {
+        return HeaderRole.PAYLOAD_BYTE_SIZE;
+    }
+
+    // contract manager
+    private var __idBlacklist:Array<String> = ["default"];
+    private var __tcpContractMap:StringMap<TCPCustomContract>;
+    // private var __udpContractMap:StringMap<UDPCustomContract>;
+
+    public function new() {
+        super("suil-contract-manager", 0);
+    }
+
+    override function onCreate(event:ScriptEvent) {
+        __tcpContractMap = new StringMap();
+
+        __tcpContractMap.set("default", createTCPContractBuilder().setConnectTimeout(600000)
+            .setRefreshTimeout(1800000)
+
+            .setConnectedMessage("client connected, welcome.")
+            .setCloseMessage("server closed, goodbye.")
+
+            .addHeader()
+            .setHeaderName("payloadSize")
+            .setHeaderType(INT_HEADER_TYPE)
+            .addHeaderRole(PAYLOAD_BYTE_SIZE_HEADER_ROLE)
+
+            .build()
+        );
+    }
+
+    public function createTCPContractBuilder():TCPContractBuilder {
+        return new TCPContractBuilder();
+    }
+
+    public function setTCPContract(id:String, contract:TCPCustomContract):Bool {
+        if(__idBlacklist.indexOf(id) != -1) {
+            return false;
+        }
+
+        __tcpContractMap.set(id, contract);
+
+        return true;
+    }
+
+    public function getTCPContract(id:String):Null<TCPCustomContract> {
+        return __tcpContractMap.get(id);
+    }
+
+    public function getTCPContractDefault():TCPCustomContract {
+        return __tcpContractMap.get("default");
+    }
+
+    override function onDestroy(event:ScriptEvent) {
+        var ids:Array<String> = [];
+
+        try {
+            for(id in __tcpContractMap.keys()) {
+                ids.push(id);
+
+                __tcpContractMap.get(id).destroy();
+            }
+        }
+        catch(e:Dynamic) {}
+
+        for(id in ids) {
+            __tcpContractMap.remove(id);
+        }
+
+        ids = null;
+    }
+}

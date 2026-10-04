@@ -1,0 +1,9 @@
+package suil0304.socket.contract.constants;
+
+// bit flag
+class HeaderRole {
+    // unique roles
+    public static final PAYLOAD_BYTE_SIZE = 1 << 0;
+
+    private function new() {}
+}

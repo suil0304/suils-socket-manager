@@ -1,0 +1,7 @@
+package suil0304.socket.event.tcp;
+
+import suil0304.socket.event.SocketEventBase;
+
+class SocketTimeoutEvent extends SocketEventBase {
+    // hmm
+}

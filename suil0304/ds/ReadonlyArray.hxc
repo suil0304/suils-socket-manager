@@ -1,0 +1,129 @@
+package suil0304.ds;
+
+class ReadonlyArray {
+    public var destroyed(default, null):Bool;
+    private var __array:Array<Dynamic>; // aw
+
+    // array property
+    public var length(get, never):Int;
+
+    function get_length():Int {
+        if(destroyed) {
+            throw "this array is destroyed";
+        }
+
+        return __array.length;
+    }
+
+    public function new(array:Array<Dynamic>) {
+        __array = array;
+
+        destroyed = false;
+    }
+
+    public function getByIndex(index:Int) {
+        if(destroyed) {
+            throw "this array is destroyed";
+        }
+
+        return __array[index];
+    }
+
+    public function concat(array:Array<Dynamic>) {
+        if(destroyed) {
+            throw "this array is destroyed";
+        }
+
+        return __array.concat(array);
+    }
+
+    public function contains(v:Dynamic) {
+        if(destroyed) {
+            throw "this array is destroyed";
+        }
+
+        return __array.contains(v);
+    }
+
+    public function copy() {
+        if(destroyed) {
+            throw "this array is destroyed";
+        }
+
+        return __array.copy();
+    }
+
+    public function filter(func:Dynamic->Bool) {
+        if(destroyed) {
+            throw "this array is destroyed";
+        }
+
+        return __array.filter(func);
+    }
+
+    public function indexOf(v:Dynamic, ?fromIndex:Null<Int>) {
+        if(destroyed) {
+            throw "this array is destroyed";
+        }
+
+        return __array.indexOf(v, fromIndex);
+    }
+
+    public function iterator() {
+        if(destroyed) {
+            throw "this array is destroyed";
+        }
+
+        return __array.iterator();
+    }
+
+    public function join(sep:String) {
+        if(destroyed) {
+            throw "this array is destroyed";
+        }
+
+        return __array.join(sep);
+    }
+
+    public function keyValueIterator() {
+        if(destroyed) {
+            throw "this array is destroyed";
+        }
+
+        return __array.keyValueIterator();
+    }
+
+    public function lastIndexOf(v:Dynamic, ?fromIndex:Null<Int>) {
+        if(destroyed) {
+            throw "this array is destroyed";
+        }
+
+        return __array.lastIndexOf(v, fromIndex);
+    }
+
+    public function map(func:Dynamic->Dynamic) {
+        if(destroyed) {
+            throw "this array is destroyed";
+        }
+
+        return __array.map(func);
+    }
+
+    public function toString() {
+        if(destroyed) {
+            throw "this array is destroyed";
+        }
+
+        return __array.toString();
+    }
+
+    public function destroy() {
+        if(destroyed) {
+            throw "this array is destroyed";
+        }
+
+        __array = null;
+
+        destroyed = true;
+    }
+}

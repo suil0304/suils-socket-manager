@@ -1,0 +1,264 @@
+package suil0304.socket;
+
+// ds
+import haxe.ds.IntMap;
+import haxe.ds.List;
+// network
+import openfl.utils.ByteArray;
+import openfl.net.DatagramSocket as OpenFlDatagramSocket;
+import haxe.io.Bytes;
+import haxe.io.Error;
+// reflect
+import funkin.util.ReflectUtil;
+// socket.event
+import suil0304.socket.event.SocketEventType;
+// socket.event.udp
+import suil0304.socket.event.udp.UDPSocketConnectEvent;
+import suil0304.socket.event.udp.UDPSocketDataEvent;
+import suil0304.socket.event.udp.UDPSocketCloseEvent;
+
+// depend on V-Slice 0.9 Preview 3 (OpenFL 9.5.0)
+// + dont use it
+class DatagramSocket {
+    private var __socket:OpenFlDatagramSocket;
+    private var __udpSocketRaw:_UdpSocketRaw;
+    private var __events:IntMap<Array<_SocketEventListener>>;
+
+    // buffer
+    private var __receiveRawBytes:Bytes;
+    private var __receiveBuffer:ByteArray;
+
+    // states
+    public var closed(default, null):Bool; // same as destroyed
+
+    public function new() {
+        __socket = new OpenFlDatagramSocket();
+
+        __udpSocketRaw = ReflectUtil.getProperty(__socket, "__udpSocket");
+        __udpSocketRaw.setBlocking(false);
+
+        __events = new IntMap();
+
+        // __events.set(SocketEventType.CONNECT, []);
+        __events.set(SocketEventType.DATA, []);
+        __events.set(SocketEventType.CLOSE, []);
+
+        __receiveRawBytes = ReflectUtil.getProperty(__socket, "__iBytes");
+        __receiveBuffer = ReflectUtil.getProperty(__socket, "__buffer");
+
+        closed = false;
+    }
+
+    public function bind(localPort:Int = 0, localAddress:String = "0.0.0.0") {
+        if(closed) {
+            throw "socket closed";
+        }
+
+        __socket.bind(localPort, localAddress);
+    }
+
+    public function send(text:String, address:Null<String> = null, port:Int = 0) {
+        if(closed) {
+            throw "socket closed";
+        }
+
+        var bytes = ByteArray.fromBytes(Bytes.ofString(text));
+        __socket.send(bytes, 0, bytes.length, address, port);
+    }
+
+    static final _blockedString = "Blocked";
+    static final _nullObjectReferenceString = "Custom(Null Object Reference)";
+    public function receive() {
+        if(closed) {
+            throw "socket closed";
+        }
+
+        try {
+            var byteReady = __receiveRawBytes.length;
+            try {
+                byteReady = __udpSocketRaw.readFrom(__receiveRawBytes, 0, __receiveRawBytes.length, null); // openfl address issue
+            }
+            catch(e:Dynamic) {
+                var errorString:String = e.toString();
+                if(
+                    !(
+                        errorString.length >= _nullObjectReferenceString.length
+                        && errorString.substring(errorString.length - _nullObjectReferenceString.length) == _nullObjectReferenceString
+                    )
+                ) {
+                    throw e;
+                }
+            }
+
+            __receiveBuffer.writeBytes(ByteArray.fromBytes(__receiveRawBytes), 0, byteReady);
+            __receiveBuffer.position = 0;
+
+            dispatchEvent(SocketEventType.DATA);
+
+            __receiveBuffer.clear();
+        }
+        catch(e:Dynamic) {
+            var errorString:String = e.toString();
+            if(
+                errorString.length >= _blockedString.length
+                && errorString.substring(errorString.length - _blockedString.length) == _blockedString
+            ) {
+                return;
+            }
+
+            throw e;
+        }
+    }
+
+    public function close(doDispatchEvent:Bool = true) {
+        if(closed) {
+            throw "socket closed";
+        }
+
+        if(doDispatchEvent) {
+            dispatchEvent(SocketEventType.CLOSE);
+        }
+
+        closed = true;
+
+        __receiveRawBytes = null;
+        __receiveBuffer = null;
+
+        try {
+            __socket.close();
+        }
+        catch(e:Dynamic) {}
+
+        __socket = null;
+        __udpSocketRaw = null;
+
+        for(key in __events.keys()) {
+            var listeners = __events.get(key);
+            if(listeners == null) {
+                continue;
+            }
+
+            for(i in 0...listeners.length) {
+                listeners[i] = null;
+            }
+        }
+
+        __events.clear();
+        __events = null;
+    }
+
+    // event line
+    public function addEventListener(socketEvent:Int, listener:Dynamic->Void, priority:Int = 10) {
+        if(closed) {
+            throw "socket closed";
+        }
+
+        var listeners = __events.get(socketEvent);
+
+        listeners.push({
+            priority: priority,
+            listener: listener
+        });
+
+        listeners.sort((a, b) -> {
+            return a.priority - b.priority;
+        });
+    }
+
+    public function dispatchEvent(socketEvent:Int) {
+        if(closed) {
+            throw "socket closed";
+        }
+
+        var listeners = __events.get(socketEvent);
+        if(listeners == null) {
+            trace("wh");
+
+            return;
+        }
+
+        var socketEventData = switch(socketEvent) {
+            case SocketEventType.CONNECT:
+                new SocketConnectEvent(__socket.localAddress, __socket.localPort, {
+                    remoteAddress: __socket.remoteAddress,
+                    remotePort: __socket.remotePort
+                });
+
+            case SocketEventType.DATA:
+                new UDPSocketDataEvent(__socket.localAddress, __socket.localPort, {
+                    data: __receiveBuffer
+                });
+
+            case SocketEventType.CLOSE:
+                new UDPSocketCloseEvent(__socket.localAddress, __socket.localPort);
+        }
+
+        for(curListener in listeners) {
+            if(!socketEventData.shouldPropagate) {
+                break;
+            }
+
+            if(curListener == null) {
+                continue;
+            }
+
+            curListener.listener(socketEventData);
+        }
+    }
+
+    public function removeEventListener(socketEvent:Int, listener:Dynamic->Void):Bool {
+        if(closed) {
+            throw "socket closed";
+        }
+
+        var listeners = __events.get(socketEvent);
+        var removed = false;
+
+        for(i in 0...listeners.length) {
+            var curListener = listeners[i];
+            if(curListener == null) {
+                continue;
+            }
+
+            if(curListener.listener == listener) {
+                listeners.splice(i, 1);
+
+                removed = true;
+
+                break;
+            }
+        }
+
+        return removed;
+    }
+
+    public function willTrigger(socketEvent:Int):Bool {
+        if(closed) {
+            throw "socket closed";
+        }
+
+        return __events.get(socketEvent).length > 0;
+    }
+}
+
+typedef _SocketEventListener = {
+    var priority:Int;
+    var listener:Dynamic->Void;
+}
+
+// not a real udp socket, just typing
+class _UdpSocketRaw {
+    // Socket Fields & Methods
+    public function setBlocking(v:Bool):Void {}
+    public function host():Dynamic {
+        return null;
+    }
+
+    // sendTo pass
+    // addr:sys.net.Address
+    public function readFrom(buf:Bytes, pos:Int, len:Int, addr:Dynamic):Int {
+        return 0;
+    }
+
+    // setBroadcast pass
+}

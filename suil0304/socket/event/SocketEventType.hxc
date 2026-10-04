@@ -1,0 +1,9 @@
+package suil0304.socket.event;
+
+class SocketEventType {
+    public static final CONNECT = 0;
+    public static final DATA = 1;
+    public static final CLOSE = 2;
+
+    private function new() {}
+}
