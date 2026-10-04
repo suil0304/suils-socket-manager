@@ -13,6 +13,7 @@ import funkin.util.ReflectUtil;
 // socket.event
 import suil0304.socket.event.SocketEventType;
 // socket.event.udp
+import suil0304.socket.event.udp.UDPSocketConnectEvent;
 import suil0304.socket.event.udp.UDPSocketDataEvent;
 import suil0304.socket.event.udp.UDPSocketCloseEvent;
 

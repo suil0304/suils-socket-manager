@@ -54,7 +54,7 @@ class SuilContractManager extends Module {
     // private var __udpContractMap:StringMap<UDPCustomContract>;
 
     public function new() {
-        super("suil-contract-handler", 0);
+        super("suil-contract-manager", 0);
     }
 
     override function onCreate(event:ScriptEvent) {
@@ -79,12 +79,12 @@ class SuilContractManager extends Module {
         return new TCPContractBuilder();
     }
 
-    public function setTCPContract(id:String, schema:TCPCustomContract):Bool {
+    public function setTCPContract(id:String, contract:TCPCustomContract):Bool {
         if(__idBlacklist.indexOf(id) != -1) {
             return false;
         }
 
-        __tcpContractMap.set(id, schema);
+        __tcpContractMap.set(id, contract);
 
         return true;
     }

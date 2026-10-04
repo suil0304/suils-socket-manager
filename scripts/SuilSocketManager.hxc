@@ -51,12 +51,12 @@ class SuilSocketManager extends Module {
         __socketMap = new StringMap();
     }
 
-    public function createSocket(id:String, schema:TCPCustomContract):Bool {
+    public function createSocket(id:String, contract:TCPCustomContract):Bool {
         if(__socketMap.exists(id)) {
             return false;
         }
 
-        var socket = new Socket(schema);
+        var socket = new Socket(contract);
         __socketMap.set(id, socket);
 
         return true;
