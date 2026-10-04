@@ -65,6 +65,8 @@ class Socket {
         __events.set(SocketEventType.CONNECT_TIMEOUT, []);
         __events.set(SocketEventType.REFRESH_TIMEOUT, []);
 
+        __socket.timeout = contract.connectTimeout;
+
         __contract = contract;
 
         __receiveBuffer = {
