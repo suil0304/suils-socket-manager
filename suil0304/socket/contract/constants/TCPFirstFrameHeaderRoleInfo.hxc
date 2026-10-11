@@ -7,7 +7,7 @@ class TCPFirstFrameHeaderRoleInfo {
         TCPFirstFrameHeaderRole.NOTHING => {
             unique: false,
             optional: true,
-            blacklistedType: null
+            blacklistedType: []
         },
         TCPFirstFrameHeaderRole.PAYLOAD_BYTE_SIZE => {
             unique: true,
@@ -49,5 +49,5 @@ class TCPFirstFrameHeaderRoleInfo {
 typedef RoleInfo = {
     var unique:Bool;
     var optional:Bool;
-    var blacklistedType:Null<Array<Int>>;
+    var blacklistedType:Array<Int>;
 }

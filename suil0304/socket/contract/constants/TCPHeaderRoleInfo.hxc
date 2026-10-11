@@ -7,7 +7,7 @@ class TCPHeaderRoleInfo {
         TCPHeaderRole.NOTHING => {
             unique: false,
             optional: true,
-            blacklistedType: null
+            blacklistedType: []
         },
         TCPHeaderRole.PAYLOAD_BYTE_SIZE => {
             unique: true,
@@ -52,5 +52,5 @@ class TCPHeaderRoleInfo {
 typedef RoleInfo = {
     var unique:Bool;
     var optional:Bool;
-    var blacklistedType:Null<Array<Int>>;
+    var blacklistedType:Array<Int>;
 }
