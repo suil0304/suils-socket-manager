@@ -13,7 +13,6 @@ class TCPFirstFrameHeaderRoleInfo {
             unique: true,
             optional: false,
             blacklistedType: [
-                optional: false,
                 HeaderType.CUSTOM_BIT,
                 HeaderType.CUSTOM_BYTE,
                 HeaderType.BOOL,
