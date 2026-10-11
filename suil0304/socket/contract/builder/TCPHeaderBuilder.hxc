@@ -108,6 +108,9 @@ class TCPHeaderBuilder implements IHeaderBuilder {
             case HeaderType.INT:
                 header.size = 32;
                 header.variable = false;
+            case HeaderType.LONG
+                header.size = 64;
+                header.variable = false;
             case HeaderType.CUSTOM_BYTE:
                 header.size = 32;
                 header.variable = false;
