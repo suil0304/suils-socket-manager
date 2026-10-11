@@ -3,6 +3,7 @@ package suil0304.socket.contract.builder;
 import haxe.ds.StringMap;
 import haxe.ds.IntMap;
 import suil0304.socket.contract.header.TCPFirstFrameHeader;
+import suil0304.socket.contract.constants.HeaderType;
 import suil0304.socket.contract.constants.TCPFirstFrameHeaderRole;
 import suil0304.socket.contract.constants.TCPFirstFrameHeaderRoleInfo;
 
