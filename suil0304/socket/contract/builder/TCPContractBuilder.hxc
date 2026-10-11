@@ -2,8 +2,6 @@ package suil0304.socket.contract.builder;
 
 import haxe.ds.StringMap;
 import suil0304.socket.contract.TCPCustomContract;
-import suil0304.socket.contract.constants.HeaderType;
-import suil0304.socket.contract.constants.HeaderUniqueRole;
 import suil0304.socket.contract.header.TCPFirstFrameHeader;
 import suil0304.socket.contract.header.TCPHeader;
 
