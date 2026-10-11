@@ -1,0 +1,77 @@
+package suil0304.socket.contract.header;
+
+import haxe.ds.IntMap;
+import haxe.ds.StringMap;
+import suil0304.ds.ReadonlyStringMap;
+import suil0304.ds.ReadonlyIntMap;
+import suil0304.ds.ReadonlyArray;
+
+// abstract
+class TCPHeaderBase {
+    public var headerMap(default, null):ReadonlyStringMap; // TCPCustomHeader
+    public var headerUniqueRoleMap(default, null):ReadonlyIntMap; // String
+
+    public var headerNameOrders(default, null):ReadonlyArray; // String
+
+    public var totalSize(default, null):Int;
+    public var totalByteSize(default, null):Int;
+
+    private function new(
+        headerMapRaw:StringMap<TCPCustomHeader>,
+        headerUniqueRoleMapRaw:IntMap<String>
+    ) {
+        headerMap = new ReadonlyStringMap(headerMapRaw);
+        headerUniqueRoleMap = new ReadonlyIntMap(headerUniqueRoleMapRaw);
+
+        totalSize = 0;
+
+        var array = [];
+        for(name in headerMapRaw.keys()) {
+            array.push(name);
+
+            totalSize += headerMapRaw.get(name).size;
+        }
+
+        totalByteSize = Math.ceil(totalSize / 8);
+
+        array.sort((a, b) -> {
+            return headerMapRaw.get(a).order - headerMapRaw.get(b).order;
+        });
+
+        headerNameOrders = new ReadonlyArray(array);
+    }
+
+    public function getHeaderByIndex(index:Int):TCPCustomHeader {
+        if(index < 0 || index + 1 > headerNameOrders.length) {
+            throw "out of bounds";
+        }
+
+        var name = headerNameOrders.getByIndex(index);
+
+        return headerMap.get(name);
+    }
+
+    public function getHeaderByName(name:String):TCPCustomHeader {
+        if(!headerMap.exists(name)) {
+            throw "found wrong header";
+        }
+
+        return headerMap.get(name);
+    }
+
+    public function getHeaderByUniqueRole(role:Int):TCPCustomHeader {
+        if(!headerUniqueRoleMap.exists(role)) {
+            throw "found wrong header";
+        }
+
+        var name = headerUniqueRoleMap.get(role);
+
+        return headerMap.get(name);
+    }
+}
+
+typedef TCPCustomHeader = {
+    var type:Int;
+    var size:Int;
+    var order:Int;
+}

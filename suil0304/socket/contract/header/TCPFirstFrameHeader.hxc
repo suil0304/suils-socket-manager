@@ -1,0 +1,10 @@
+package suil0304.socket.contract.header;
+
+class TCPFirstFrameHeader extends TCPHeaderBase {
+    public function new(
+        headerMapRaw:StringMap<Dynamic>,
+        headerUniqueRoleMapRaw:IntMap<String>
+    ) {
+        super(headerMapRaw, headerUniqueRoleMapRaw);
+    }
+}
