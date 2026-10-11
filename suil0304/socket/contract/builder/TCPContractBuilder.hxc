@@ -79,10 +79,14 @@ class TCPContractBuilder {
     // option
     public function setDoBytePadding(v:Bool):TCPContractBuilder {
         __doBytePadding = v;
+
+        return this;
     }
 
     public function setDoBytePaddingFrameEnd(v:Bool):TCPContractBuilder {
         __doBytePaddingFrameEnd = v;
+
+        return this;
     }
 
     public function build():TCPCustomContract {
