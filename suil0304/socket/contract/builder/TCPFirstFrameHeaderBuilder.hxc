@@ -231,6 +231,10 @@ class TCPFirstFrameHeaderBuilder implements IHeaderBuilder {
         for(i in 0...__headers.length) {
             var header = __headers[i];
 
+            if(headerMap.exists(header.name)) {
+                throw "duplicated header name";
+            }
+
             headerMap.set(header.name, {
                 type: header.type,
                 size: header.size,
