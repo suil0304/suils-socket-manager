@@ -22,7 +22,7 @@ class TCPHeaderRoleInfo {
         },
         TCPHeaderRole.FIN => {
             unique: true,
-            optional: false,
+            optional: true,
             blacklistedType: [
                 HeaderType.CUSTOM_BIT,
                 HeaderType.BYTE,

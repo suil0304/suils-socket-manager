@@ -22,7 +22,7 @@ class TCPFirstFrameHeaderRoleInfo {
         },
         TCPFirstFrameHeaderRole.PAYLOAD_TOTAL_BYTE_SIZE => {
             unique: true,
-            optional: false,
+            optional: true,
             blacklistedType: [
                 HeaderType.CUSTOM_BIT,
                 HeaderType.CUSTOM_BYTE,
