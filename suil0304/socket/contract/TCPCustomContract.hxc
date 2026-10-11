@@ -3,107 +3,80 @@ package suil0304.socket.contract;
 import haxe.ds.StringMap;
 import suil0304.ds.ReadonlyStringMap;
 import suil0304.ds.ReadonlyArray;
+import suil0304.socket.contract.header.TCPHeader;
+import suil0304.socket.contract.header.TCPFirstFrameHeader;
 
 class TCPCustomContract {
-    public var destroyed(default, null):Bool;
-
     // contract
     public var connectTimeout(default, null):Int = 0;
-
     public var refreshTimeout(default, null):Int = 0;
 
-    // protocol
-    private var __headerMap:ReadonlyStringMap<TCPCustomHeader>;
+    // header
+    public var header(default, null):TCPHeader;
+    public var firstFrameHeader(default, null):TCPFirstFrameHeader;
 
+    public var totalHeaderSize(default, null):Int;
     public var totalHeaderByteSize(default, null):Int;
 
-    public var payloadByteSizeHeaderName(default, null):String;
+    public var totalFirstFrameHeaderSize(default, null):Int;
+    public var totalFirstFrameHeaderByteSize(default, null):Int;
 
-    public var headerOrderArray(default, null):ReadonlyArray;
-
-    // handshakes
+    // handshake
     public var connectedMessage(default, null):String;
     public var closeMessage(default, null):String;
 
-    public function new(contractParameters:ContractParameters, protocolParameters:ProtocolParameters, handshakeParameters:HandshakeParameters) {
+    // option
+    public var doBytePadding(default, null):Bool;
+    public var doBytePaddingFrameEnd(default, null):Bool;
+
+    public function new(
+        contractParameters:ContractParameters,
+        headerParameters:HeaderParameters,
+        handshakeParameters:HandshakeParameters,
+        optionParameters:OptionParameters
+    ) {
         connectTimeout = contractParameters.connectTimeout;
         refreshTimeout = contractParameters.refreshTimeout;
 
-        __headerMap = new ReadonlyStringMap(protocolParameters.headerMap.copy());
-        totalHeaderByteSize = protocolParameters.totalHeaderByteSize;
+        header = headerParameters.header;
+        firstFrameHeader = headerParameters.firstFrameHeader;
 
-        payloadByteSizeHeaderName = new String(protocolParameters.payloadByteSizeHeaderName);
+        totalHeaderSize = headerParameters.totalHeaderSize;
+        totalHeaderByteSize = headerParameters.totalHeaderByteSize;
+
+        totalFirstFrameHeaderSize = headerParameters.totalFirstFrameHeaderSize;
+        totalFirstFrameHeaderByteSize = headerParameters.totalFirstFrameHeaderByteSize;
 
         connectedMessage = new String(handshakeParameters.connectedMessage);
         closeMessage = new String(handshakeParameters.closeMessage);
 
-        var array = [];
-        for(name in __headerMap.keys()) {
-            array.push(name);
-        }
-
-        array.sort((a, b) -> {
-            return __headerMap.get(a).order - __headerMap.get(b).order;
-        });
-
-        headerOrderArray = new ReadonlyArray(array);
-
-        destroyed = false;
+        doBytePadding = optionParameters.doBytePadding;
+        doBytePaddingFrameEnd = optionParameters.doBytePaddingFrameEnd;
     }
 
-    public function getHeaderByIndex(index:Int):TCPCustomHeader {
-        if(destroyed) {
-            throw "this contract is destroyed";
-        }
-
-        if(index < 0 || index + 1 > headerOrderArray.length) {
-            throw "invalid index";
-        }
-
-        return __headerMap.get(headerOrderArray[index]);
+    public function getHeaderByIndex(index:Int) {
+        return header.getHeaderByIndex(index);
     }
 
-    public function getHeaderByName(name:String):TCPCustomHeader {
-        if(destroyed) {
-            throw "this contract is destroyed";
-        }
-
-        if(!__headerMap.exists(name)) {
-            throw "invalid name";
-        }
-
-        return __headerMap.get(name);
+    public function getHeaderByName(name:String) {
+        return header.getHeaderByName(name);
     }
 
-    public function destroy() {
-        if(destroyed) {
-            throw "this contract is destroyed";
-        }
-
-        connectTimeout = 0;
-        refreshTimeout = 0;
-
-        __headerMap.destroy();
-        __headerMap = null;
-
-        totalHeaderByteSize = 0;
-
-        payloadByteSizeHeaderName = null;
-
-        headerOrderArray.destroy();
-        headerOrderArray = null;
-
-        connectedMessage = null;
-        closeMessage = null;
-
-        destroyed = true;
+    public function getHeaderByUniqueRole(role:Int) {
+        return header.getHeaderByUniqueRole(role);
     }
-}
 
-typedef TCPCustomHeader = {
-    var type:Int;
-    var byteSize:Int;
-    var order:Int;
+    public function getFirstFrameHeaderByIndex(index:Int) {
+        return firstFrameHeader.getHeaderByIndex(index);
+    }
+
+    public function getFirstFrameHeaderByName(name:String) {
+        return firstFrameHeader.getHeaderByName(name);
+    }
+
+    public function getFirstFrameHeaderByUniqueRole(role:Int) {
+        return firstFrameHeader.getHeaderByUniqueRole(role);
+    }
 }
 
 // parameter
@@ -112,14 +85,23 @@ typedef ContractParameters = {
     var refreshTimeout:Int;
 }
 
-typedef ProtocolParameters = {
-    var headerMap:StringMap<TCPCustomHeader>;
+typedef HeaderParameters = {
+    var header:TCPHeader;
+    var firstFrameHeader:TCPFirstFrameHeader;
+
+    var totalHeaderSize:Int;
     var totalHeaderByteSize:Int;
 
-    var payloadByteSizeHeaderName:String;
+    var totalFirstFrameHeaderSize:Int;
+    var totalFirstFrameHeaderByteSize:Int;
 }
 
 typedef HandshakeParameters = {
     var connectedMessage:String;
     var closeMessage:String;
+}
+
+typedef OptionParameters = {
+    var doBytePadding:Bool;
+    var doBytePaddingFrameEnd:Bool;
 }
