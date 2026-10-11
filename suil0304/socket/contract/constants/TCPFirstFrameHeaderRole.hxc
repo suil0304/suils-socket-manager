@@ -1,0 +1,11 @@
+package suil0304.socket.contract.constants;
+
+// enum
+class TCPFirstFrameHeaderRole {
+    public static final NOTHING = 0;
+    public static final PAYLOAD_BYTE_SIZE = 1;
+    public static final PAYLOAD_TOTAL_BYTE_SIZE = 2;
+    public static final MESSAGE_ID = 3;
+
+    private function new() {}
+}

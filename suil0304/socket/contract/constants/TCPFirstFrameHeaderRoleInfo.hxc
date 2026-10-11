@@ -1,0 +1,54 @@
+package suil0304.socket.contract.constants;
+
+import haxe.ds.IntMap;
+
+class TCPFirstFrameHeaderRoleInfo {
+    public static final ROLE_INFO:IntMap<RoleInfo> = [
+        TCPFirstFrameHeaderRole.NOTHING => {
+            unique: false,
+            optional: true,
+            blacklistedType: null
+        },
+        TCPFirstFrameHeaderRole.PAYLOAD_BYTE_SIZE => {
+            unique: true,
+            optional: false,
+            blacklistedType: [
+                optional: false,
+                HeaderType.CUSTOM_BIT,
+                HeaderType.CUSTOM_BYTE,
+                HeaderType.BOOL,
+                HeaderType.STRING,
+                HeaderType.VARSTRING
+            ]
+        },
+        TCPFirstFrameHeaderRole.PAYLOAD_TOTAL_BYTE_SIZE => {
+            unique: true,
+            optional: false,
+            blacklistedType: [
+                HeaderType.CUSTOM_BIT,
+                HeaderType.CUSTOM_BYTE,
+                HeaderType.BOOL,
+                HeaderType.STRING,
+                HeaderType.VARSTRING
+            ]
+        },
+        TCPFirstFrameHeaderRole.MESSAGE_ID => {
+            unique: true,
+            optional: true,
+            blacklistedType: [
+                HeaderType.CUSTOM_BIT,
+                HeaderType.CUSTOM_BYTE,
+                HeaderType.BOOL,
+                HeaderType.VARSTRING
+            ]
+        }
+    ];
+
+    private function new() {}
+}
+
+typedef RoleInfo = {
+    var unique:Bool;
+    var optional:Bool;
+    var blacklistedType:Null<Array<Int>>;
+}

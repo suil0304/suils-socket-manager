@@ -1,0 +1,12 @@
+package suil0304.socket.contract.builder;
+
+interface IHeaderBuilder {
+    function add():IHeaderBuilder;
+    function setIndex(index:Int):IHeaderBuilder;
+    function pop():IHeaderBuilder;
+
+    function setName(name:String):IHeaderBuilder;
+    function setType(type:Int):IHeaderBuilder;
+    function setSize(size:Int):IHeaderBuilder;
+    function setRole(role:Int):IHeaderBuilder;
+}

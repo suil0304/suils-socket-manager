@@ -1,0 +1,258 @@
+package suil0304.socket.contract.builder;
+
+import haxe.ds.StringMap;
+import haxe.ds.IntMap;
+import suil0304.socket.contract.header.TCPHeader;
+import suil0304.socket.contract.constants.TCPHeaderRole;
+import suil0304.socket.contract.constants.TCPHeaderRoleInfo;
+
+class TCPHeaderBuilder implements IHeaderBuilder {
+    private var __headers:Array<_TCPCustomHeaderRaw>;
+    private var __roleCountMap:IntMap<Int>;
+    private var __curIndex:Int;
+
+    public function new() {
+        __headers = [];
+
+        __roleCountMap = new IntMap();
+        for(role in TCPHeaderRoleInfo.ROLE_INFO.keys()) {
+            __roleCountMap.set(role, 0);
+        }
+
+        __curIndex = -1;
+    }
+
+    private function __validateHeader() {
+        if(__headers.length > 0) {
+            var header = __headers[__curIndex];
+            if(header.name == null) {
+                throw "no header name";
+            }
+            else if(!header.variable && header.size < 1) {
+                throw "invalid header byte size";
+            }
+        }
+    }
+
+    public function add():TCPHeaderBuilder {
+        __validateHeader();
+        __headers.push({
+            name: null,
+            type: HeaderType.BYTE,
+            variable: false,
+            size: 0,
+            role: TCPHeaderRole.NOTHING
+        });
+        __curIndex = __headers.length - 1;
+        __roleCountMap.set(TCPHeaderRole.NOTHING, __roleCountMap.get(TCPHeaderRole.NOTHING) + 1);
+        return this;
+    }
+
+    public function setIndex(index:Int = 0):TCPHeaderBuilder {
+        if(index < 0 || index + 1 > __headers.length) {
+            throw "invalid index";
+        }
+        __validateHeader();
+        __curIndex = index;
+        return this;
+    }
+
+    public function pop():TCPHeaderBuilder {
+        if(__headers.length <= 0) {
+            throw "no header";
+        }
+        var header = __headers.pop();
+        if(__headers.length > 0) {
+            __curIndex = Std.int(Math.min(__headers.length - 1, __curIndex));
+        }
+        else {
+            __curIndex = -1;
+        }
+
+        __roleCountMap.set(header.role, __roleCountMap.get(header.role) - 1);
+
+        return this;
+    }
+
+    public function setName(name:String):TCPHeaderBuilder {
+        if(__headers.length <= 0) {
+            throw "no header";
+        }
+        __headers[__curIndex].name = name;
+        return this;
+    }
+
+    public function setType(type:Int):TCPHeaderBuilder {
+        if(__headers.length <= 0) {
+            throw "no header";
+        }
+
+        var header = __headers[__curIndex];
+        var roleInfo = TCPHeaderRoleInfo.ROLE_INFO.get(header.role);
+
+        if(roleInfo.blacklistedType.contains(type)) {
+            throw "current role is not support with this type";
+        }
+
+        switch(type) {
+            case HeaderType.CUSTOM_BIT:
+                header.size = 1;
+                header.variable = false;
+            case HeaderType.BYTE:
+                header.size = 8;
+                header.variable = false;
+            case HeaderType.SHORT:
+                header.size = 16;
+                header.variable = false;
+            case HeaderType.INT:
+                header.size = 32;
+                header.variable = false;
+            case HeaderType.CUSTOM_BYTE:
+                header.size = 32;
+                header.variable = false;
+            case HeaderType.BOOL:
+                header.size = 1;
+                header.variable = false;
+            case HeaderType.STRING:
+                header.size = 20 * 8;
+                header.variable = false;
+            case HeaderType.VARSTRING:
+                header.size = 0;
+                header.variable = true;
+            default:
+                throw "invalid header type";
+        }
+        header.type = type;
+        return this;
+    }
+
+    // bit
+    public function setSize(size:Int):TCPHeaderBuilder {
+        if(__headers.length <= 0) {
+            throw "no header";
+        }
+        if(size < 1) {
+            throw "invalid header bit size";
+        }
+        var header = __headers[__curIndex];
+        switch(header.type) {
+            case HeaderType.CUSTOM_BIT:
+                header.size = size;
+            case HeaderType.CUSTOM_BYTE,
+                HeaderType.STRING: // auto break
+                if(size % 8 != 0) {
+                    throw "this is not byte size";
+                }
+                header.size = size;
+            default:
+                throw "changing bit size is not support for this header type";
+        }
+        return this;
+    }
+
+    public function setRole(role:Int):TCPHeaderBuilder {
+        if(__headers.length <= 0) {
+            throw "no header";
+        }
+        if(!TCPHeaderRoleInfo.ROLE_INFO.exists(role)) {
+            throw "invalid role";
+        }
+
+        var header = __headers[__curIndex];
+
+        if(header.role == role) {
+            trace("this header already have this role");
+
+            return this;
+        }
+
+        var roleInfo = TCPHeaderRoleInfo.ROLE_INFO.get(role);
+
+        if(roleInfo.unique) {
+            var count = __roleCountMap.get(role);
+            if(count >= 1) {
+                throw "duplicated role";
+            }
+        }
+
+        if(roleInfo.blacklistedType.contains(header.type)) {
+            throw "current role is not support with this type";
+        }
+
+        __roleCountMap.set(header.role, __roleCountMap.get(header.role) - 1);
+        header.role = role;
+        __roleCountMap.set(header.role, __roleCountMap.get(header.role) + 1);
+
+        return this;
+    }
+
+    public function build():TCPHeader {
+        if(__headers.length <= 0) {
+            throw "no header";
+        }
+
+        for(i in 0...__headers.length) {
+            __curIndex = i;
+            __validateHeader();
+        }
+
+        for(role => info in TCPHeaderRoleInfo.ROLE_INFO.keyValueIterator()) {
+            if(info.unique && info.optional) {
+                var count = __roleCountMap.get(role);
+                if(count > 1) {
+                    throw "too many optional unique role";
+                }
+
+                continue;
+            }
+            else if(info.unique) {
+                var count = __roleCountMap.get(role);
+                if(count != 1) {
+                    throw "header must have only one unique role";
+                }
+
+                continue;
+            }
+
+            if(!info.optional) {
+                var count = __roleCountMap.get(role);
+                if(count <= 0) {
+                    throw "not unique role count should be greater then 0";
+                }
+
+                continue;
+            }
+        }
+
+        var headerMap = new StringMap();
+        var headerUniqueRoleMap = new IntMap();
+
+        for(i in 0...__headers.length) {
+            var header = __headers[i];
+
+            headerMap.set(header.name, {
+                type: header.type,
+                size: header.size,
+                order: i
+            });
+
+            var roleInfo = TCPHeaderRoleInfo.ROLE_INFO.get(header.role);
+            if(roleInfo.unique) {
+                headerUniqueRoleMap.set(header.role, header.name);
+            }
+        }
+
+        return new TCPHeader(
+            headerMap,
+            headerUniqueRoleMap
+        );
+    }
+}
+
+typedef _TCPCustomHeaderRaw = {
+    var name:Null<String>;
+    var type:Int; // sick
+    var variable:Bool;
+    var size:Int; // bit size
+    var role:Int;
+}
